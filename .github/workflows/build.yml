@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
 
+# The Release step creates a GitHub release and uploads the zip; new repositories default the
+# workflow token to read-only, so grant write access to repository contents explicitly.
+permissions:
+  contents: write
+
 jobs:
   windows:
     runs-on: windows-latest
