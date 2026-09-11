@@ -7,7 +7,7 @@
 #   ... -ClipSeconds 5         seconds to keep from each clip (default 6)
 param(
     [Parameter(Mandatory = $true)][string[]]$Clips,
-    [string[]]$Captions = @("Close the lid.|Open it.|From any angle."),   # one per clip, separated by |
+    [string[]]$Captions = @("The lid closes.|The lid opens.|From any angle."),   # one per clip, separated by |
     [string]$Music,
     [switch]$Fill,
     [double]$ClipSeconds = 6,
