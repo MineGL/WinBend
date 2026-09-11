@@ -2,3 +2,5 @@
 /dist/*.zip
 /dist/stage
 *.pdb
+/installer/winbend.ico
+/dist/*.exe

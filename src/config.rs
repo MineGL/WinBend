@@ -16,18 +16,28 @@ pub struct StyleParams {
     pub vignette: f32,
     /// 0..1 glossy highlight.
     pub sheen: f32,
+    /// Fold geometry: 1 = one hinged panel; 2..8 = origami accordion with that many panels.
+    #[serde(default = "d_panels")]
+    pub panels: f32,
 }
 
+fn d_panels() -> f32 { 1.0 }
+
 impl StyleParams {
-    pub const SILK: StyleParams = StyleParams { perspective: 2.6, blur: 0.0, shadow: 0.40, bend: 0.30, vignette: 0.25, sheen: 0.8 };
-    pub const SHADE: StyleParams = StyleParams { perspective: 2.4, blur: 0.15, shadow: 0.90, bend: 0.20, vignette: 0.55, sheen: 0.2 };
-    pub const FROST: StyleParams = StyleParams { perspective: 2.8, blur: 1.0, shadow: 0.45, bend: 0.35, vignette: 0.30, sheen: 0.4 };
+    pub const SILK: StyleParams = StyleParams { perspective: 2.6, blur: 0.0, shadow: 0.40, bend: 0.30, vignette: 0.25, sheen: 0.8, panels: 1.0 };
+    pub const SHADE: StyleParams = StyleParams { perspective: 2.4, blur: 0.15, shadow: 0.90, bend: 0.20, vignette: 0.55, sheen: 0.2, panels: 1.0 };
+    pub const FROST: StyleParams = StyleParams { perspective: 2.8, blur: 1.0, shadow: 0.45, bend: 0.35, vignette: 0.30, sheen: 0.4, panels: 1.0 };
+    /// Accordion: the desktop creases into three zigzag panels that compress as the lid closes.
+    pub const ORIGAMI: StyleParams = StyleParams { perspective: 3.0, blur: 0.0, shadow: 0.75, bend: 0.12, vignette: 0.15, sheen: 0.5, panels: 3.0 };
+
+    pub const NAMES: [&'static str; 5] = ["silk", "shade", "frost", "origami", "custom"];
 
     pub fn preset(name: &str) -> Option<StyleParams> {
         match name {
             "silk" => Some(Self::SILK),
             "shade" => Some(Self::SHADE),
             "frost" => Some(Self::FROST),
+            "origami" => Some(Self::ORIGAMI),
             _ => None,
         }
     }
@@ -51,7 +61,7 @@ fn d_camera_flat() -> f32 { 40.0 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Config {
-    /// "silk" | "shade" | "frost" | "custom"
+    /// "silk" | "shade" | "frost" | "origami" | "custom"
     #[serde(default = "d_style")]
     pub style: String,
     #[serde(default = "d_custom")]
@@ -275,7 +285,7 @@ pub fn with_field(cfg: &Config, key: &str, value: serde_json::Value) -> Result<C
 
 impl Config {
     pub fn validate(&mut self) -> Result<(), String> {
-        if !matches!(self.style.as_str(), "silk" | "shade" | "frost" | "custom") { return Err("Unknown style.".into()); }
+        if !StyleParams::NAMES.contains(&self.style.as_str()) { return Err("Unknown style.".into()); }
         if !matches!(self.after_fold.as_str(), "none" | "lock" | "sleep" | "display_off") { return Err("Unknown after-fold action.".into()); }
         if parse_hex_color(&self.background).is_none() { return Err("Use a six-digit color such as #102030.".into()); }
         let Some((mods, _)) = parse_hotkey(&self.hotkey) else { return Err("Invalid hotkey.".into()) };
@@ -291,6 +301,8 @@ impl Config {
         self.fold_ms = self.fold_ms.clamp(150, 5000);
         self.fold_when_idle_min = self.fold_when_idle_min.min(1440);
         limit(&mut self.custom.perspective, 1.2, 8.0)?;
+        limit(&mut self.custom.panels, 1.0, 8.0)?;
+        self.custom.panels = self.custom.panels.round();
         for v in [&mut self.custom.blur, &mut self.custom.shadow, &mut self.custom.bend, &mut self.custom.vignette, &mut self.custom.sheen] { limit(v, 0.0, 1.0)?; }
         limit(&mut self.camera_vfov_deg, 20.0, 120.0)?;
         limit(&mut self.camera_travel_deg, 20.0, 120.0)?;

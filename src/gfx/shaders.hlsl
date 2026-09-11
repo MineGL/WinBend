@@ -13,6 +13,8 @@ cbuffer Params : register(b0)
     float2 texel;     // 1 / blur-source size
     float2 blurDir;   // blur direction * step in texels
     float4 bgColor;   // background behind the panel
+    float  panels;    // 1 = single hinged panel; 2+ = accordion (origami) with this many panels
+    float3 _pad;
 };
 
 Texture2D    texSharp : register(t0);
@@ -22,7 +24,7 @@ SamplerState smpLinear : register(s0);
 // ---------------------------------------------------------------------------
 // Fold pass: a 2 x ROWS grid panel hinged at the bottom edge, bending away.
 // ---------------------------------------------------------------------------
-static const uint ROWS = 160;
+static const uint ROWS = 240; // divisible by 2..6 and 8 so accordion creases land on strip edges
 
 struct VSOut
 {
@@ -64,6 +66,24 @@ void profile(float s, float H, out float y, out float z, out float phi)
     }
 }
 
+// Origami: the panel is creased into `n` equal segments that zigzag away from and back toward
+// the viewer, so the whole sheet compresses like an accordion as theta grows. Geometry stays
+// sharp at the creases; `bend` only softens the lighting across them.
+void profileAccordion(float s, float H, float n, out float y, out float z, out float phi)
+{
+    float seg = H / n;
+    float k = floor(min(s, H - 1e-4) / seg);
+    float local = s - k * seg;
+    float odd = fmod(k, 2.0);
+    float dir = 1.0 - 2.0 * odd;           // +1 leans away, -1 leans back
+    float c = cos(theta), sn = sin(theta);
+    y = k * seg * c + local * c;
+    z = -odd * seg * sn - dir * local * sn;
+    float e = max(bend * seg * 0.5, 1e-4);
+    float w = smoothstep(0.0, e, min(local, seg - local));
+    phi = lerp(0.0, dir * theta, w);
+}
+
 VSOut VS_Fold(uint id : SV_VertexID)
 {
     uint strip  = id / 6;
@@ -75,7 +95,10 @@ VSOut VS_Fold(uint id : SV_VertexID)
 
     const float H = 2.0; // panel height in world units (y from -1 to 1 when flat)
     float y, z, phi;
-    profile(v * H, H, y, z, phi);
+    if (panels >= 1.5)
+        profileAccordion(v * H, H, round(panels), y, z, phi);
+    else
+        profile(v * H, H, y, z, phi);
 
     float3 p = float3((u * 2.0 - 1.0) * aspect, -1.0 + y, z);
     float3 n = float3(0.0, sin(phi), cos(phi));
@@ -105,6 +128,14 @@ float4 PS_Fold(VSOut i) : SV_Target
 
     // Lambert-ish shading from the viewer's direction: the panel darkens as it turns away.
     float lam = pow(i.ndotv, 1.6);
+    if (panels >= 1.5)
+    {
+        // Accordion facets alternate toward and away from a light above the viewer, so
+        // neighbouring panels read as distinct planes instead of one darkening sheet.
+        float3 Lp = normalize(float3(0.0, 2.5, camDist * 1.5) - i.wpos);
+        float diff = saturate(dot(normalize(i.nrm), Lp));
+        lam = lerp(0.55, 1.0, diff) * lerp(1.0, i.ndotv, 0.35);
+    }
     float lit = lerp(1.0, lam, shade);
 
     // Extra darkening toward the far edge, scaled by how folded we are.

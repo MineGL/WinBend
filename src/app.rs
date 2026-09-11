@@ -143,6 +143,7 @@ pub fn fold_params(style: &StyleParams, t: f32, max_tilt_deg: f32, bg: [f32; 4])
         vignette: style.vignette.clamp(0.0, 1.0),
         sheen: style.sheen.clamp(0.0, 1.0),
         bg,
+        panels: style.panels.round().clamp(1.0, 8.0),
     }
 }
 
@@ -826,6 +827,7 @@ impl App {
             CMD_STYLE_SILK => { self.cfg.style = "silk".into(); self.save(); }
             CMD_STYLE_SHADE => { self.cfg.style = "shade".into(); self.save(); }
             CMD_STYLE_FROST => { self.cfg.style = "frost".into(); self.save(); }
+            CMD_STYLE_ORIGAMI => { self.cfg.style = "origami".into(); self.save(); }
             CMD_STYLE_CUSTOM => { self.cfg.style = "custom".into(); self.save(); }
             CMD_FOLLOW_HINGE => { self.cfg.follow_hinge = !self.cfg.follow_hinge; self.save(); }
             CMD_FOLLOW_ACCEL => { self.cfg.follow_accelerometer = !self.cfg.follow_accelerometer; self.save(); }

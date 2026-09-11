@@ -6,8 +6,8 @@ on:
     tags: ["v*"]
   pull_request:
 
-# The Release step creates a GitHub release and uploads the zip; new repositories default the
-# workflow token to read-only, so grant write access to repository contents explicitly.
+# The Release step creates a GitHub release and uploads the artifacts; new repositories default
+# the workflow token to read-only, so grant write access to repository contents explicitly.
 permissions:
   contents: write
 
@@ -24,20 +24,31 @@ jobs:
       - name: Settings window smoke test
         continue-on-error: true
         run: .\target\release\winbend.exe --ui-test 8
-      - name: Package
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Package (zip + installer)
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force stage | Out-Null
-          Copy-Item target/release/winbend.exe, dist/README.txt, LICENSE stage/
           $v = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
-          Compress-Archive -Path stage/* -DestinationPath "WinBend-$v-win64.zip"
+          New-Item -ItemType Directory -Force stage, dist | Out-Null
+          Copy-Item target/release/winbend.exe, dist/README.txt, LICENSE stage/
+          Compress-Archive -Path stage/* -DestinationPath "dist/WinBend-$v-win64.zip"
+          $ico = Get-ChildItem "target/release/build/winbend-*/out/winbend.ico" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          Copy-Item $ico.FullName installer/winbend.ico -Force
+          & "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" "/DSourceDir=$PWD\target\release" "/Q" installer\winbend.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          Get-ChildItem dist
       - uses: actions/upload-artifact@v4
         with:
           name: WinBend-win64
-          path: WinBend-*-win64.zip
+          path: |
+            dist/WinBend-*-win64.zip
+            dist/WinBend-Setup-*.exe
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: WinBend-*-win64.zip
+          files: |
+            dist/WinBend-Setup-*.exe
+            dist/WinBend-*-win64.zip
           generate_release_notes: true

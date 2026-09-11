@@ -37,6 +37,7 @@ pub const CMD_STYLE_SILK: u32 = 101;
 pub const CMD_STYLE_SHADE: u32 = 102;
 pub const CMD_STYLE_FROST: u32 = 103;
 pub const CMD_STYLE_CUSTOM: u32 = 104;
+pub const CMD_STYLE_ORIGAMI: u32 = 105;
 pub const CMD_FOLLOW_HINGE: u32 = 110;
 pub const CMD_UNFOLD_ON_LID: u32 = 111;
 pub const CMD_SETTINGS: u32 = 112;
@@ -439,6 +440,7 @@ fn show_tray_menu(hwnd: HWND) {
         menu_item(style, CMD_STYLE_SILK, "Silk", st.style == "silk", true);
         menu_item(style, CMD_STYLE_SHADE, "Shade", st.style == "shade", true);
         menu_item(style, CMD_STYLE_FROST, "Frost", st.style == "frost", true);
+        menu_item(style, CMD_STYLE_ORIGAMI, "Origami (accordion fold)", st.style == "origami", true);
         menu_item(style, CMD_STYLE_CUSTOM, "Custom (from settings file)", st.style == "custom", true);
         let w = wide("Style");
         let _ = AppendMenuW(menu, MF_POPUP, style.0 as usize, PCWSTR(w.as_ptr()));

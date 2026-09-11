@@ -10,7 +10,7 @@ use windows::Win32::Graphics::Dxgi::Common::*;
 use super::device::Gpu;
 
 const SHADER_SRC: &str = include_str!("shaders.hlsl");
-const ROWS: u32 = 160; // keep in sync with shaders.hlsl
+const ROWS: u32 = 240; // keep in sync with shaders.hlsl
 const FORMAT: DXGI_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 
 #[derive(Clone, Copy, Debug)]
@@ -24,6 +24,8 @@ pub struct FoldParams {
     pub vignette: f32,
     pub sheen: f32,
     pub bg: [f32; 4],
+    /// 1 = single hinged panel; 2..8 = accordion with that many panels.
+    pub panels: f32,
 }
 
 #[repr(C)]
@@ -40,6 +42,8 @@ struct CbParams {
     texel: [f32; 2],
     blur_dir: [f32; 2],
     bg: [f32; 4],
+    panels: f32,
+    _pad: [f32; 3],
 }
 
 struct RenderTex {
@@ -278,6 +282,8 @@ impl Renderer {
             texel: [1.0 / t.bw as f32, 1.0 / t.bh as f32],
             blur_dir: [0.0, 0.0],
             bg: p.bg,
+            panels: p.panels.round().clamp(1.0, 8.0),
+            _pad: [0.0; 3],
         };
 
         unsafe {

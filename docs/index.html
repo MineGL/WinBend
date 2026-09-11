@@ -48,14 +48,57 @@ section{padding:56px 0;border-top:1px solid var(--line)}
 .wallet:last-child{border-bottom:0}.wallet code{font:13px Consolas,monospace;color:var(--muted);overflow-wrap:anywhere}
 .wallet button{border:1px solid var(--line);background:var(--bg2);color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;font-size:14px}.wallet button:hover{border-color:var(--accent)}
 footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
-@media (max-width:820px){.hero{grid-template-columns:1fr}.grid,.req{grid-template-columns:1fr}nav a{margin-left:14px}}
+/* Style gallery: one fake desktop, four fold treatments, all CSS. Each .mini loops a 5.5 s
+   close-and-open cycle; the sheet is the same gradient + windows as the hero. */
+.styles{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.style{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 18px}
+.style h3{margin:14px 0 4px}.style p{color:var(--muted);font-size:14px;margin:0}
+.mini{perspective:520px;perspective-origin:50% 62%;aspect-ratio:16/11;position:relative;border-radius:10px;background:radial-gradient(90% 70% at 50% 100%,#1a1e30 0%,#0d0f16 70%)}
+.sheet{position:absolute;left:8%;right:8%;top:10%;bottom:14%;border-radius:8px;overflow:hidden;transform-origin:50% 100%;
+ background:radial-gradient(120% 90% at 20% 10%,#6d7cff 0%,#3b3f8f 35%,#1c2140 70%,#0e1120 100%);box-shadow:0 14px 40px #0008,inset 0 0 0 1px #ffffff18}
+.sheet .w{position:absolute;background:#f6f7fbe6;border-radius:5px}.sheet .w.a{left:9%;top:16%;width:50%;height:52%}.sheet .w.b{left:47%;top:34%;width:42%;height:46%;background:#1d2130e6}
+.sheet .w i{display:block;height:5px;margin:8px 8px 0;border-radius:3px;background:#c7cbe0}.sheet .w.b i{background:#3a4060}.sheet .w i:nth-child(2){width:60%}.sheet .w i:nth-child(3){width:35%}
+.sheet .bar{position:absolute;left:0;right:0;bottom:0;height:9%;background:#0f1220cc}
+.sheet:after{content:"";position:absolute;inset:0;pointer-events:none}
+/* Silk: clean tilt with a glossy band that slides down the panel */
+.silk .sheet{animation:tilt 5.5s cubic-bezier(.65,0,.35,1) infinite}
+.silk .sheet:after{background:linear-gradient(170deg,#0000 30%,#ffffff55 46%,#0000 58%),linear-gradient(180deg,#0000 60%,#0007 100%);animation:sheen 5.5s cubic-bezier(.65,0,.35,1) infinite}
+/* Shade: same tilt, heavy darkening toward the far edge */
+.shade .sheet{animation:tilt 5.5s cubic-bezier(.65,0,.35,1) infinite}
+.shade .sheet:after{background:linear-gradient(180deg,#000c 0%,#0006 45%,#0000 100%);animation:fade 5.5s cubic-bezier(.65,0,.35,1) infinite}
+/* Frost: tilt plus a blur that grows with the fold */
+.frost .sheet{animation:tilt 5.5s cubic-bezier(.65,0,.35,1) infinite,frost 5.5s cubic-bezier(.65,0,.35,1) infinite}
+.frost .sheet:after{background:linear-gradient(180deg,#ffffff22,#0000 50%,#0005 100%);animation:fade 5.5s cubic-bezier(.65,0,.35,1) infinite}
+/* Origami: three hinged panels in a 3D chain; each child rotates the opposite way about the shared crease */
+.origami .mini{perspective:700px}
+.origami .sheet{overflow:visible;background:none;box-shadow:none;transform-origin:50% 100%;transform-style:preserve-3d;animation:acc-a 5.5s cubic-bezier(.65,0,.35,1) infinite;top:auto;height:26.67%;bottom:14%}
+.origami .sheet:after{display:none}
+.panel{position:absolute;left:0;right:0;height:100%;transform-style:preserve-3d;background:radial-gradient(120% 90% at 20% 10%,#6d7cff 0%,#3b3f8f 35%,#1c2140 70%,#0e1120 100%);background-size:100% 300%;box-shadow:inset 0 0 0 1px #ffffff18}
+.panel.p1{bottom:0;background-position:0 100%;border-radius:0 0 8px 8px}
+.panel.p2{bottom:100%;transform-origin:50% 100%;background-position:0 50%;animation:acc-b 5.5s cubic-bezier(.65,0,.35,1) infinite}
+.panel.p3{bottom:100%;transform-origin:50% 100%;background-position:0 0;border-radius:8px 8px 0 0;animation:acc-c 5.5s cubic-bezier(.65,0,.35,1) infinite}
+.panel:after{content:"";position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+.panel.p2:after{animation:facet 5.5s cubic-bezier(.65,0,.35,1) infinite}.panel.p1:after,.panel.p3:after{animation:facet-light 5.5s cubic-bezier(.65,0,.35,1) infinite}
+.panel{overflow:visible}.panel .w{position:absolute;background:#f6f7fbe6;border-radius:4px;clip-path:inset(0)}.panel .w i{display:block;height:4px;margin:6px 6px 0;border-radius:2px;background:#c7cbe0}
+@keyframes tilt{0%,14%{transform:rotateX(0)}46%,56%{transform:rotateX(82deg)}88%,100%{transform:rotateX(0)}}
+@keyframes sheen{0%,14%{opacity:0;background-position:0 -60%,0 0}46%,56%{opacity:1;background-position:0 60%,0 0}88%,100%{opacity:0;background-position:0 -60%,0 0}}
+@keyframes fade{0%,14%{opacity:0}46%,56%{opacity:1}88%,100%{opacity:0}}
+@keyframes frost{0%,14%{filter:blur(0)}46%,56%{filter:blur(3px)}88%,100%{filter:blur(0)}}
+@keyframes acc-a{0%,14%{transform:rotateX(0)}46%,56%{transform:rotateX(78deg)}88%,100%{transform:rotateX(0)}}
+@keyframes acc-b{0%,14%{transform:rotateX(0)}46%,56%{transform:rotateX(-156deg)}88%,100%{transform:rotateX(0)}}
+@keyframes acc-c{0%,14%{transform:rotateX(0)}46%,56%{transform:rotateX(156deg)}88%,100%{transform:rotateX(0)}}
+@keyframes facet{0%,14%{opacity:0}46%,56%{opacity:.45}88%,100%{opacity:0}}
+@keyframes facet-light{0%,14%{opacity:0}46%,56%{opacity:.15}88%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.styles *{animation:none!important}.silk .sheet,.shade .sheet,.frost .sheet{transform:rotateX(40deg)}.frost .sheet{filter:blur(1.5px)}.origami .sheet{transform:rotateX(40deg)}.panel.p2{transform:rotateX(-80deg)}.panel.p3{transform:rotateX(80deg)}.sheet:after,.panel:after{opacity:.5}}
+@media (max-width:820px){.hero{grid-template-columns:1fr}.grid,.req{grid-template-columns:1fr}.styles{grid-template-columns:1fr 1fr}nav a{margin-left:14px}}
+@media (max-width:480px){.styles{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <a class="brand" href="#"><span class="mark">◩</span>WinBend</a>
-  <nav><a href="#features">Features</a><a href="#download">Download</a><a href="#donate">Donate</a><a href="https://github.com/MineGL/winbend">GitHub</a></nav>
+  <nav><a href="#features">Features</a><a href="#styles">Styles</a><a href="#download">Download</a><a href="#donate">Donate</a><a href="https://github.com/MineGL/WinBend">GitHub</a></nav>
 </header>
 
 <section class="hero" style="border-top:0">
@@ -63,10 +106,10 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
     <h1>Your desktop bends as you close the lid.</h1>
     <p class="lead">WinBend captures your live desktop and folds it like a laptop lid coming down: it tilts, bends, blurs and settles. Press a key, or let it follow the lid through your webcam.</p>
     <div class="cta">
-      <a class="btn primary" id="download" href="https://github.com/MineGL/winbend/releases/latest">Download for Windows</a>
-      <a class="btn" href="https://github.com/MineGL/winbend">Source on GitHub</a>
+      <a class="btn primary" id="download" href="https://github.com/MineGL/WinBend/releases/latest">Download for Windows</a>
+      <a class="btn" href="https://github.com/MineGL/WinBend">Source on GitHub</a>
     </div>
-    <p class="fine">Free and open source (MIT). One file, no installer, no account, no network. Windows 10 2004+ / Windows 11.</p>
+    <p class="fine">Free and open source (MIT). Installer or a single portable file, no account, no network. Windows 10 2004+ / Windows 11.</p>
   </div>
   <div class="demo" aria-hidden="true">
     <div class="screen">
@@ -83,17 +126,28 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
   <div class="grid">
     <div class="card"><h3>Live desktop</h3><p>Windows.Graphics.Capture feeds the real screen into a Direct3D 11 renderer, so windows and wallpaper move together. Anti-aliased, 60 fps.</p></div>
     <div class="card"><h3>Follow the lid</h3><p>Opt-in webcam tracking turns camera motion into a lid angle. The fold runs through the last degrees before shut and lifts as you open. Guided calibration fits it to your laptop.</p></div>
-    <div class="card"><h3>Three styles</h3><p>Silk, Shade and Frost, plus Custom with perspective, blur, shadow, bend, vignette and sheen sliders. A live preview shows your own desktop while you tune.</p></div>
+    <div class="card"><h3>Four styles</h3><p>Silk, Shade, Frost, and Origami, which creases the desktop into zigzag panels that compress like an accordion. Custom adds panels, perspective, blur, shadow, bend, vignette and sheen sliders with a live preview of your own desktop.</p></div>
     <div class="card"><h3>Sleep &amp; wake</h3><p>Fold finishes as the PC sleeps and the desktop is still folded when the screen returns, then lifts. Optional: let WinBend handle the lid so the fold plays before sleep.</p></div>
     <div class="card"><h3>Shortcuts</h3><p><span class="kbd">Ctrl+Alt+B</span> folds or unfolds anywhere. <span class="kbd">Ctrl+Alt+C</span> toggles lid tracking. Both are changeable with a press-a-key picker.</p></div>
     <div class="card"><h3>Private by design</h3><p>Frames are processed on your PC and dropped immediately. Nothing is recorded, saved or uploaded. The camera light is on whenever tracking is on.</p></div>
   </div>
 </section>
 
+<section id="styles">
+  <h2>Four ways to fold</h2>
+  <p class="lead" style="color:var(--muted);margin-top:0">Pick one in Settings, or build your own with the Custom sliders. The live preview shows your real desktop while you tune.</p>
+  <div class="styles" aria-label="Fold styles">
+    <div class="style silk"><div class="mini" aria-hidden="true"><div class="sheet"><div class="w a"><i></i><i></i><i></i></div><div class="w b"><i></i><i></i><i></i></div><div class="bar"></div></div></div><h3>Silk</h3><p>Clean perspective with a soft bend near the hinge and a glossy band that sweeps down as it closes. The default.</p></div>
+    <div class="style shade"><div class="mini" aria-hidden="true"><div class="sheet"><div class="w a"><i></i><i></i><i></i></div><div class="w b"><i></i><i></i><i></i></div><div class="bar"></div></div></div><h3>Shade</h3><p>Deep shadow gathers toward the far edge, so the desktop looks like it is sinking into the dark behind the lid.</p></div>
+    <div class="style frost"><div class="mini" aria-hidden="true"><div class="sheet"><div class="w a"><i></i><i></i><i></i></div><div class="w b"><i></i><i></i><i></i></div><div class="bar"></div></div></div><h3>Frost</h3><p>The picture blurs as it tilts, like frosted glass coming down, and sharpens again the moment the lid lifts.</p></div>
+    <div class="style origami"><div class="mini" aria-hidden="true"><div class="sheet"><div class="panel p1"><div class="w" style="left:9%;top:10%;width:50%;height:70%"><i></i><i></i></div><div class="bar"></div></div><div class="panel p2"><div class="w" style="left:9%;top:-20%;width:50%;height:120%;background:#f6f7fb99"><i></i><i></i><i></i></div><div class="w" style="left:47%;top:30%;width:42%;height:70%;background:#1d2130e6"><i></i><i></i></div><div class="panel p3"><div class="w" style="left:47%;top:60%;width:42%;height:60%;background:#1d2130e6"><i></i></div></div></div></div></div><h3>Origami</h3><p>The desktop creases into three zigzag panels that compress like an accordion, each facet lit as its own plane. Set 2 to 8 panels in Custom.</p></div>
+  </div>
+</section>
+
 <section id="download">
   <h2>Download</h2>
   <div class="req">
-    <div class="card"><h3>Get it</h3><p>Grab <code>WinBend-&lt;version&gt;-win64.zip</code> from the <a href="https://github.com/MineGL/winbend/releases/latest">latest release</a>, unzip, run <code>winbend.exe</code>. It lives in the tray; a welcome window opens the first time.</p></div>
+    <div class="card"><h3>Get it</h3><p>Run <code>WinBend-Setup-&lt;version&gt;.exe</code> from the <a href="https://github.com/MineGL/WinBend/releases/latest">latest release</a>: no admin prompt, Start menu entry, optional start at sign-in. Prefer portable? The same release has <code>WinBend-&lt;version&gt;-win64.zip</code>: unzip and run <code>winbend.exe</code>. Either way WinBend lives in the tray and a welcome window opens the first time.</p></div>
     <div class="card"><h3>Requirements</h3><p>Windows 10 version 2004 or later, Windows 11 recommended. Any Direct3D 11 GPU. Microsoft Edge WebView2 Runtime for the settings window (included with Windows 11).</p></div>
     <div class="card"><h3>Unsigned, for now</h3><p>Windows may show “Windows protected your PC” for a new download: choose <em>More info → Run anyway</em>. The source is public and you can build it yourself.</p></div>
   </div>
@@ -114,7 +168,7 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
 
 <footer>
   WinBend is MIT licensed. Inspired by Bendy for macOS. Built with Rust, Direct3D 11 and Windows.Graphics.Capture.
-  <br><a href="https://github.com/MineGL/winbend">github.com/MineGL/winbend</a> · <a href="https://github.com/MineGL/winbend/issues">Report an issue</a>
+  <br><a href="https://github.com/MineGL/WinBend">github.com/MineGL/winbend</a> · <a href="https://github.com/MineGL/WinBend/issues">Report an issue</a>
 </footer>
 </div>
 <script>

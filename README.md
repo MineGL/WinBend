@@ -5,8 +5,8 @@ on the GPU as a panel that tilts away from you around its bottom edge, bending s
 darkening and blurring as it goes. It is a Windows take on the macOS app Bendy and the
 foldable-phone "fold" animation.
 
-Free and open source (MIT). One `winbend.exe`, no installer, no account, no network.
-Lives in the tray. If it makes you smile, [donations](#donate) keep it going.
+Free and open source (MIT). A small installer or a single portable `winbend.exe`, no account,
+no network. Lives in the tray. If it makes you smile, [donations](#donate) keep it going.
 
 Website: **[winbend.me](https://winbend.me)** · Download: [latest release](https://github.com/MineGL/winbend/releases/latest)
 
@@ -43,10 +43,11 @@ offers the download page, and opens the settings file instead; the tray menu kee
 `winbend --ui-test 5` opens the window headlessly for a few seconds and exits 0 once the page
 and the first preview arrived (used by CI).
 
-Three built-in styles, selectable from the tray or the settings window: **Silk** (clean perspective with a
-glossy sweep), **Shade** (deep shadow toward the far edge), **Frost** (strong blur).
-`Custom` reads six values from the settings file: perspective, blur, shadow, bend,
-vignette, sheen.
+Four built-in styles, selectable from the tray or the settings window: **Silk** (clean perspective
+with a glossy sweep), **Shade** (deep shadow toward the far edge), **Frost** (strong blur), and
+**Origami**, which creases the desktop into three zigzag panels that compress like an accordion
+as the lid closes, each facet lit as its own plane. `Custom` exposes seven values: panels
+(1 = single hinge, 2–8 = accordion), perspective, blur, shadow, bend, vignette, sheen.
 
 ### Webcam tracking, in detail
 
@@ -97,8 +98,14 @@ any animation can run; nothing in user space can delay that.
 
 ## Install
 
-Download `WinBend-<version>-win64.zip` from the Releases page, unzip anywhere, run
-`winbend.exe`. It appears in the tray (possibly behind the `^` arrow). Press `Ctrl+Alt+B`.
+**Installer** (recommended): download `WinBend-Setup-<version>.exe` from the
+[latest release](https://github.com/MineGL/WinBend/releases/latest) and run it. It installs per
+user (no admin prompt) into `%LOCALAPPDATA%\Programs\WinBend`, adds a Start menu entry, and can
+start WinBend at sign-in. Uninstall from Windows Settings → Apps like any other program.
+
+**Portable**: download `WinBend-<version>-win64.zip`, unzip anywhere, run `winbend.exe`.
+
+Either way WinBend appears in the tray (possibly behind the `^` arrow). Press `Ctrl+Alt+B`.
 
 Windows may show "Windows protected your PC" for an unsigned download: click *More info*
 → *Run anyway*. WinBend never connects to the internet; you can also build it yourself.
@@ -113,8 +120,9 @@ cargo build --release
 
 Rust stable (MSVC target), Visual Studio Build Tools with the C++ workload, and a Windows
 10/11 SDK. Shaders compile at runtime with `d3dcompiler_47.dll`, which ships with Windows.
-`dist\package.ps1` builds and zips a release. GitHub Actions does the same on every push
-and attaches the zip to tagged releases (`v*`).
+`dist\package.ps1` builds the portable zip and, when Inno Setup 6 is installed
+(`winget install JRSoftware.InnoSetup`), the installer from `installer\winbend.iss`. GitHub
+Actions does the same on every push and attaches both to tagged releases (`v*`).
 
 Useful during development:
 
@@ -130,7 +138,7 @@ Useful during development:
 *Reload settings*. Everything in the tray menu writes here too.
 
 ```toml
-style = "silk"            # silk | shade | frost | custom
+style = "silk"            # silk | shade | frost | origami | custom
 max_tilt_deg = 86.0       # how far the panel tilts when fully folded (90 = edge-on)
 fold_ms = 1100            # hotkey animation duration
 hotkey = "Ctrl+Alt+B"     # Ctrl / Alt / Shift / Win + a letter, digit, or F-key
@@ -153,6 +161,7 @@ hinge_closed_deg = 10.0
 background = "#000000"
 
 [custom]
+panels = 1.0              # 1 = one hinged panel; 2..8 = origami accordion with that many panels
 perspective = 2.6         # camera distance; smaller = more dramatic
 blur = 0.0
 shadow = 0.4

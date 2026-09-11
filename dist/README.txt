@@ -3,10 +3,13 @@ WinBend - your desktop folds like a lid closing
 Free and open source (MIT). Source, issues and updates: see "WinBend on GitHub" in the tray menu.
 
 Install
-  1. Unzip anywhere (for example your Desktop or C:\Tools\WinBend).
-  2. Double-click winbend.exe. It appears in the tray (bottom-right, near the clock; maybe
-     behind the ^ arrow).
-  3. Press Ctrl+Alt+B. Your desktop folds down. Press it again, any key, or click to unfold.
+  Installer: run WinBend-Setup-<version>.exe. No admin prompt; it installs for your user only,
+  adds a Start menu entry and can start WinBend when you sign in.
+  Portable (this zip): unzip anywhere (for example your Desktop or C:\Tools\WinBend) and
+  double-click winbend.exe.
+
+  WinBend appears in the tray (bottom-right, near the clock; maybe behind the ^ arrow).
+  Press Ctrl+Alt+B. Your desktop folds down. Press it again, any key, or click to unfold.
 
   If Windows shows "Windows protected your PC", click "More info" and then "Run anyway".
   WinBend is a single file that never connects to the internet.
@@ -34,7 +37,8 @@ Use
   - "Run at startup" keeps WinBend in the tray after you sign in.
 
 Uninstall
-  Quit from the tray menu, delete winbend.exe, and delete the folder %APPDATA%\WinBend.
+  Installed version: Windows Settings > Apps > WinBend > Uninstall.
+  Portable version: quit from the tray menu, delete winbend.exe, and delete the folder %APPDATA%\WinBend.
   If "Run at startup" was on, turn it off first. If you enabled either Windows integration
   item, click it again first so Windows' lid and sign-in behaviour go back to normal.
 
