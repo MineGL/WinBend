@@ -4,3 +4,4 @@
 *.pdb
 /installer/winbend.ico
 /dist/*.exe
+/promo/out

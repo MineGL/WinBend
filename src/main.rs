@@ -66,6 +66,25 @@ fn main() {
         return;
     }
 
+    // Promo frames: a full close/hold/open cycle as PNGs, from a PNG or the live screen.
+    //   winbend --render-clip out\silk --style silk --frames 105 [--source desktop.png]
+    if let Some(dir) = arg_value(&args, "--render-clip") {
+        let cfg = Config::load();
+        let style = arg_value(&args, "--style").and_then(|s| StyleParams::preset(&s)).unwrap_or_else(|| cfg.style_params());
+        let frames: u32 = arg_value(&args, "--frames").and_then(|s| s.parse().ok()).unwrap_or(105);
+        let source = arg_value(&args, "--source").map(std::path::PathBuf::from);
+        let gpu = gfx::device::Gpu::new().expect("D3D11 device");
+        let mut renderer = gfx::renderer::Renderer::new(&gpu).expect("shaders");
+        match App::render_clip(&gpu, &mut renderer, &style, cfg.max_tilt_deg, cfg.background_rgba(), source.as_deref(), frames, std::path::Path::new(&dir)) {
+            Ok(()) => println!("wrote {frames} frames to {dir}"),
+            Err(e) => {
+                eprintln!("render clip failed: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
     // Support diagnostics: which triggers this machine can use.
     if args.iter().any(|a| a == "--diag") {
         win::register_class().expect("window class");

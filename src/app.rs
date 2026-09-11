@@ -1140,6 +1140,125 @@ impl App {
         }
     }
 
+    /// Load a PNG into a BGRA8 shader resource (used by `--render-clip --source`).
+    fn load_png_texture(gpu: &Gpu, path: &std::path::Path) -> Result<(windows::Win32::Graphics::Direct3D11::ID3D11ShaderResourceView, u32, u32)> {
+        use windows::Win32::Graphics::Direct3D11::*;
+        use windows::Win32::Graphics::Dxgi::Common::*;
+        fn fail<E>(_: E) -> windows::core::Error { windows::core::Error::from_hresult(windows::core::HRESULT(-2147467259)) }
+        let file = std::fs::File::open(path).map_err(fail)?;
+        let mut decoder = png::Decoder::new(std::io::BufReader::new(file));
+        decoder.set_transformations(png::Transformations::normalize_to_color8() | png::Transformations::ALPHA);
+        let mut reader = decoder.read_info().map_err(fail)?;
+        let mut buf = vec![0u8; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buf).map_err(fail)?;
+        let (w, h) = (info.width, info.height);
+        let mut bgra = vec![0u8; (w * h * 4) as usize];
+        match info.color_type {
+            png::ColorType::Rgba => {
+                for (s, d) in buf.chunks_exact(4).zip(bgra.chunks_exact_mut(4)) {
+                    d.copy_from_slice(&[s[2], s[1], s[0], 255]);
+                }
+            }
+            png::ColorType::GrayscaleAlpha => {
+                for (s, d) in buf.chunks_exact(2).zip(bgra.chunks_exact_mut(4)) {
+                    d.copy_from_slice(&[s[0], s[0], s[0], 255]);
+                }
+            }
+            _ => return Err(fail(())),
+        }
+        let desc = D3D11_TEXTURE2D_DESC {
+            Width: w,
+            Height: h,
+            MipLevels: 1,
+            ArraySize: 1,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Usage: D3D11_USAGE_IMMUTABLE,
+            BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
+            CPUAccessFlags: 0,
+            MiscFlags: 0,
+        };
+        let init = D3D11_SUBRESOURCE_DATA { pSysMem: bgra.as_ptr() as *const _, SysMemPitch: w * 4, SysMemSlicePitch: 0 };
+        let mut tex = None;
+        unsafe { gpu.device.CreateTexture2D(&desc, Some(&init), Some(&mut tex))? };
+        let tex = tex.unwrap();
+        let mut srv = None;
+        unsafe { gpu.device.CreateShaderResourceView(&tex, None, Some(&mut srv))? };
+        Ok((srv.unwrap(), w, h))
+    }
+
+    /// Offline render for `--render-clip`: a full close-hold-open cycle as numbered PNG frames,
+    /// from a PNG (`source`) or the live primary monitor. Used to produce promo videos.
+    pub fn render_clip(gpu: &Gpu, renderer: &mut Renderer, style: &StyleParams, max_tilt: f32, bg: [f32; 4], source: Option<&std::path::Path>, frames: u32, out_dir: &std::path::Path) -> Result<()> {
+        use windows::Win32::Graphics::Direct3D11::*;
+        use windows::Win32::Graphics::Dxgi::Common::*;
+        fn fail<E>(_: E) -> windows::core::Error { windows::core::Error::from_hresult(windows::core::HRESULT(-2147467259)) }
+        std::fs::create_dir_all(out_dir).map_err(fail)?;
+        let mut _cap = None;
+        let (srv, w, h) = match source {
+            Some(p) => Self::load_png_texture(gpu, p)?,
+            None => {
+                let mut cap = Capture::for_monitor(gpu, win::primary_monitor().hmon)?;
+                let deadline = Instant::now() + Duration::from_secs(3);
+                while cap.frames == 0 && Instant::now() < deadline {
+                    cap.poll(gpu);
+                    std::thread::sleep(Duration::from_millis(10));
+                }
+                if cap.frames == 0 {
+                    return Err(fail(()));
+                }
+                let r = (cap.srv.clone(), cap.width, cap.height);
+                _cap = Some(cap);
+                r
+            }
+        };
+        let mk = |usage: D3D11_USAGE, bind: u32, cpu: u32| D3D11_TEXTURE2D_DESC {
+            Width: w,
+            Height: h,
+            MipLevels: 1,
+            ArraySize: 1,
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Usage: usage,
+            BindFlags: bind,
+            CPUAccessFlags: cpu,
+            MiscFlags: 0,
+        };
+        let mut dst = None;
+        let mut staging = None;
+        unsafe {
+            gpu.device.CreateTexture2D(&mk(D3D11_USAGE_DEFAULT, D3D11_BIND_RENDER_TARGET.0 as u32, 0), None, Some(&mut dst))?;
+            gpu.device.CreateTexture2D(&mk(D3D11_USAGE_STAGING, 0, D3D11_CPU_ACCESS_READ.0 as u32), None, Some(&mut staging))?;
+        }
+        let dst = dst.unwrap();
+        let staging = staging.unwrap();
+        let frames = frames.max(2);
+        for i in 0..frames {
+            // Close over the first 45 %, rest folded, then open: the same feel as a hotkey fold.
+            let u = i as f32 / (frames - 1) as f32;
+            let t = if u < 0.45 {
+                ease_in_out(u / 0.45)
+            } else if u < 0.58 {
+                1.0
+            } else {
+                1.0 - ease_in_out((u - 0.58) / 0.42)
+            };
+            let params = fold_params(style, t, max_tilt, bg);
+            renderer.render(gpu, &srv, &dst, w, h, &params)?;
+            unsafe { gpu.ctx.CopyResource(&staging, &dst); }
+            let rgba = crate::gfx::readback_rgba(gpu, &staging, w, h)?;
+            let file = std::fs::File::create(out_dir.join(format!("{i:04}.png"))).map_err(fail)?;
+            let mut enc = png::Encoder::new(std::io::BufWriter::new(file), w, h);
+            enc.set_color(png::ColorType::Rgba);
+            enc.set_depth(png::BitDepth::Eight);
+            enc.set_compression(png::Compression::Fast);
+            enc.set_filter(png::FilterType::Sub);
+            let mut writer = enc.write_header().map_err(fail)?;
+            writer.write_image_data(&rgba).map_err(fail)?;
+        }
+        Ok(())
+    }
+
     /// Offline render for `--render-test`: capture one frame and write a PNG.
     pub fn render_test(gpu: &Gpu, renderer: &mut Renderer, t: f32, style: &StyleParams, max_tilt: f32, bg: [f32; 4], out: &std::path::Path) -> Result<()> {
         use windows::Win32::Graphics::Direct3D11::*;
