@@ -85,10 +85,10 @@ $grid = Next "grid"
 $cell = "scale=540:-2,setsar=1"
 $fc = "[0:v]${cell}[a];[1:v]${cell}[b];[2:v]${cell}[c];[3:v]${cell}[d];[a][b]hstack[ab];[c][d]hstack[cd];[ab][cd]vstack[g];" +
       "[g]pad=1080:1920:0:(oh-ih)/2:color=${black}," +
-      (Draw "Silk" $semi 40 $white 640) + "," +
-      "drawtext=fontfile='${semi}':text='Shade':fontsize=40:fontcolor=${white}:x=540+(540-text_w)/2:y=640," +
-      "drawtext=fontfile='${semi}':text='Frost':fontsize=40:fontcolor=${white}:x=(540-text_w)/2:y=1260," +
-      "drawtext=fontfile='${semi}':text='Origami':fontsize=40:fontcolor=${white}:x=540+(540-text_w)/2:y=1260," +
+      "drawtext=fontfile='${semi}':text='Silk':fontsize=40:fontcolor=${white}:x=(540-text_w)/2:y=596," +
+      "drawtext=fontfile='${semi}':text='Shade':fontsize=40:fontcolor=${white}:x=540+(540-text_w)/2:y=596," +
+      "drawtext=fontfile='${semi}':text='Frost':fontsize=40:fontcolor=${white}:x=(540-text_w)/2:y=1276," +
+      "drawtext=fontfile='${semi}':text='Origami':fontsize=40:fontcolor=${white}:x=540+(540-text_w)/2:y=1276," +
       "fade=t=in:st=0:d=0.3,fade=t=out:st=2.9:d=0.3[v]"
 Run $grid @("-framerate", "$fps", "-i", "$work\silk\%04d.png", "-framerate", "$fps", "-i", "$work\shade\%04d.png", "-framerate", "$fps", "-i", "$work\frost\%04d.png", "-framerate", "$fps", "-i", "$work\origami\%04d.png", "-filter_complex", $fc, "-map", "[v]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "$fps", "-t", "3.2")
 $parts += $grid
