@@ -5,7 +5,8 @@
 #   ... -Style origami        fold style (default silk)
 #   ... -Source x.png         desktop picture for the fold (default: promo\out\desktop.png, or your wallpaper)
 #   ... -Threshold 46         how dark counts as "screen" (raise if the screen is not picked up, lower if the desk is)
-#   ... -CloseAt 0.9          lid closure fraction at which the fold is complete
+#   ... -OpenAt 0.12 -CloseAt 0.75   lid closure fractions where the fold starts / is complete
+#   ... -Grow 150             how light a connected reflection may be and still count as screen
 #   ... -Out promo\clips\close.mp4
 #
 # The result is a normal clip to hand to make-live.ps1 with -Clips.
@@ -14,7 +15,9 @@ param(
     [string]$Style = "silk",
     [string]$Source = "",
     [int]$Threshold = 46,
-    [double]$CloseAt = 0.9,
+    [int]$Grow = 150,
+    [double]$CloseAt = 0.75,
+    [double]$OpenAt = 0.12,
     [string]$Out = ""
 )
 $ErrorActionPreference = "Stop"
@@ -52,7 +55,7 @@ if (-not $Source) {
 if ($LASTEXITCODE -ne 0) { throw "fold render failed" }
 
 # 3. track + composite
-& $tool --video "$work\video" --fold "$work\fold" --out "$work\out" --threshold $Threshold --close-at $CloseAt
+& $tool --video "$work\video" --fold "$work\fold" --out "$work\out" --threshold $Threshold --grow $Grow --close-at $CloseAt --open-at $OpenAt
 if ($LASTEXITCODE -ne 0) { throw "compositor failed" }
 
 # 4. frames -> clip (video only; make-live.ps1 adds the soundtrack)

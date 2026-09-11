@@ -34,13 +34,16 @@ fn list_pngs(dir: &Path) -> Vec<PathBuf> {
 
 /// Largest dark connected component whose centre lies in the middle of the frame, as its pixel
 /// set on a downsampled grid. Returns (pixels, scale).
-fn dark_component(img: &RgbImage, threshold: u8) -> Option<(Vec<(u32, u32)>, u32)> {
-    let scale = ((img.width().max(img.height()) / 480).max(1)) as u32;
+/// Hysteresis segmentation: components are seeded by truly black pixels (< `threshold`) and
+/// grown into connected darker-than-room pixels (< `grow`), so glossy reflections of the
+/// keyboard or the room inside the panel stay part of the screen while the light deck around
+/// it does not. The component with the most seed pixels wins.
+fn dark_component(img: &RgbImage, threshold: u8, grow: u8, hinge_y: Option<f64>) -> Option<(Vec<(u32, u32)>, u32)> {
+    let scale = ((img.width().max(img.height()) / 1400).max(1)) as u32;
     let (w, h) = (img.width() / scale, img.height() / scale);
-    let mut dark = vec![false; (w * h) as usize];
+    let mut level = vec![0u8; (w * h) as usize];
     for y in 0..h {
         for x in 0..w {
-            // average the block so film grain / compression noise does not break the mask
             let mut sum = 0u32;
             let mut n = 0u32;
             for yy in 0..scale {
@@ -50,15 +53,17 @@ fn dark_component(img: &RgbImage, threshold: u8) -> Option<(Vec<(u32, u32)>, u32
                     n += 1;
                 }
             }
-            dark[(y * w + x) as usize] = ((sum / n) as u8) < threshold;
+            // Everything below the hinge line is base/keyboard/desk, never screen.
+            let below_hinge = hinge_y.map_or(false, |hy| (y * scale) as f64 >= hy);
+            level[(y * w + x) as usize] = if below_hinge { 255 } else { (sum / n) as u8 };
         }
     }
     let mut label = vec![0u32; (w * h) as usize];
-    let mut best: Option<(Vec<(u32, u32)>, f64)> = None;
+    let mut best: Option<(Vec<(u32, u32)>, usize)> = None;
     let mut next = 1u32;
     let mut stack = Vec::new();
     for start in 0..(w * h) {
-        if !dark[start as usize] || label[start as usize] != 0 {
+        if level[start as usize] >= threshold || label[start as usize] != 0 {
             continue;
         }
         next += 1;
@@ -66,10 +71,14 @@ fn dark_component(img: &RgbImage, threshold: u8) -> Option<(Vec<(u32, u32)>, u32
         stack.push(start);
         label[start as usize] = next;
         let mut pixels = Vec::new();
+        let mut seeds = 0usize;
         let (mut sx, mut sy) = (0f64, 0f64);
         while let Some(i) = stack.pop() {
             let (x, y) = (i % w, i / w);
             pixels.push((x, y));
+            if level[i as usize] < threshold {
+                seeds += 1;
+            }
             sx += x as f64;
             sy += y as f64;
             let neighbours = [
@@ -81,7 +90,7 @@ fn dark_component(img: &RgbImage, threshold: u8) -> Option<(Vec<(u32, u32)>, u32
             for (nx, ny) in neighbours {
                 if nx < w && ny < h {
                     let j = (ny * w + nx) as usize;
-                    if dark[j] && label[j] == 0 {
+                    if level[j] < grow && label[j] == 0 {
                         label[j] = next;
                         stack.push(j as u32);
                     }
@@ -89,13 +98,14 @@ fn dark_component(img: &RgbImage, threshold: u8) -> Option<(Vec<(u32, u32)>, u32
             }
         }
         let area = pixels.len() as f64 / (w * h) as f64;
+        let seed_area = seeds as f64 / (w * h) as f64;
         let (cx, cy) = (sx / pixels.len() as f64 / w as f64, sy / pixels.len() as f64 / h as f64);
-        // a screen: not tiny, not the whole room, roughly central
-        if area < 0.004 || area > 0.6 || !(0.12..=0.88).contains(&cx) || !(0.08..=0.92).contains(&cy) {
+        // a screen: enough truly black pixels, not the whole room, roughly central
+        if seed_area < 0.003 || area > 0.6 || !(0.12..=0.88).contains(&cx) || !(0.08..=0.92).contains(&cy) {
             continue;
         }
-        if best.as_ref().map_or(true, |(_, a)| area > *a) {
-            best = Some((pixels, area));
+        if best.as_ref().map_or(true, |(_, s)| seeds > *s) {
+            best = Some((pixels, seeds));
         }
     }
     best.map(|(p, _)| (p, scale))
@@ -175,8 +185,12 @@ fn main() {
     let fold = PathBuf::from(arg(&args, "--fold").expect("--fold DIR (png frames from winbend --render-clip --linear)"));
     let out = PathBuf::from(arg(&args, "--out").expect("--out DIR"));
     let threshold: u8 = arg(&args, "--threshold").and_then(|s| s.parse().ok()).unwrap_or(46);
+    // reflections on a glossy off screen are grey, the deck and desk around it are light
+    let grow: u8 = arg(&args, "--grow").and_then(|s| s.parse().ok()).unwrap_or(150);
     // lid closure fraction at which the fold is complete (the screen never reaches 0 px tall)
-    let close_at: f64 = arg(&args, "--close-at").and_then(|s| s.parse().ok()).unwrap_or(0.9);
+    let close_at: f64 = arg(&args, "--close-at").and_then(|s| s.parse().ok()).unwrap_or(0.75);
+    // lid closure fraction at which the fold starts (the desktop stays flat before that)
+    let open_at: f64 = arg(&args, "--open-at").and_then(|s| s.parse().ok()).unwrap_or(0.12);
     let gain: f64 = arg(&args, "--gain").and_then(|s| s.parse().ok()).unwrap_or(0.9);
     let reverse = args.iter().any(|a| a == "--reverse"); // clip opens the lid instead of closing it
     std::fs::create_dir_all(&out).expect("create out dir");
@@ -187,14 +201,42 @@ fn main() {
     assert!(!fold_paths.is_empty(), "no fold frames in {}", fold.display());
     let folds: Vec<RgbImage> = fold_paths.iter().map(|p| image::open(p).expect("fold png").to_rgb8()).collect();
 
+    // Pass 0: the hinge line. The camera and base are static, so the bottom edge of the screen
+    // in the frame where the screen is largest (truly black pixels only, no growing) is where
+    // the lid meets the base for the whole clip. Nothing below it may be counted as screen.
+    let hinge_y = {
+        let mut best: Option<(usize, f64)> = None;
+        let probes: Vec<usize> = (0..frames.len()).step_by((frames.len() / 12).max(1)).collect();
+        for &i in &probes {
+            let img = image::open(&frames[i]).expect("video png").to_rgb8();
+            if let Some((px, _)) = dark_component(&img, threshold, threshold, None) {
+                let n = px.len() as f64;
+                if best.map_or(true, |(_, b)| n > b) {
+                    best = Some((i, n));
+                }
+            }
+        }
+        best.and_then(|(i, _)| {
+            let img = image::open(&frames[i]).expect("video png").to_rgb8();
+            dark_component(&img, threshold, threshold, None).map(|(px, s)| {
+                let q = corners(&px, s);
+                let hy = q[2].y.max(q[3].y) + 3.0;
+                eprintln!("hinge line at y={hy:.0} (from frame {i})");
+                hy
+            })
+        })
+    };
+
     // Pass 1: track the screen in every frame.
     let mut quads: Vec<Option<[P; 4]>> = Vec::with_capacity(frames.len());
     let mut smooth: Option<[P; 4]> = None;
+    let mut missing = 0u32;
     for (i, f) in frames.iter().enumerate() {
         let img = image::open(f).expect("video png").to_rgb8();
-        let found = dark_component(&img, threshold).map(|(px, s)| corners(&px, s));
+        let found = dark_component(&img, threshold, grow, hinge_y).map(|(px, s)| corners(&px, s));
         let q = match (found, smooth) {
             (Some(q), Some(prev)) => {
+                missing = 0;
                 let mut s = prev;
                 for k in 0..4 {
                     s[k].x = prev[k].x * 0.55 + q[k].x * 0.45;
@@ -202,8 +244,15 @@ fn main() {
                 }
                 Some(s)
             }
-            (Some(q), None) => Some(q),
-            (None, prev) => prev,
+            (Some(q), None) => {
+                missing = 0;
+                Some(q)
+            }
+            // Bridge a dropout of a few frames; after that the screen is really gone (lid shut).
+            (None, prev) => {
+                missing += 1;
+                if missing <= 3 { prev } else { None }
+            }
         };
         smooth = q;
         quads.push(q);
@@ -221,9 +270,10 @@ fn main() {
     // Pass 2: composite.
     for (i, f) in frames.iter().enumerate() {
         let mut img = image::open(f).expect("video png").to_rgb8();
-        if let Some(q) = quads[i] {
+        // Below ~8 % of the open height the "screen" is a sliver of bezel: leave the frame alone.
+        if let Some(q) = quads[i].filter(|_| heights[i] > 0.08 * h_open) {
             let closure = (1.0 - heights[i] / h_open).clamp(0.0, 1.0);
-            let mut t = (closure / close_at).clamp(0.0, 1.0);
+            let mut t = ((closure - open_at) / (close_at - open_at).max(0.05)).clamp(0.0, 1.0);
             t = t * t * (3.0 - 2.0 * t);
             let _ = reverse; // the mapping is symmetric; the flag only documents intent
             let fi = ((t * (folds.len() - 1) as f64).round() as usize).min(folds.len() - 1);
