@@ -73,9 +73,10 @@ fn main() {
         let style = arg_value(&args, "--style").and_then(|s| StyleParams::preset(&s)).unwrap_or_else(|| cfg.style_params());
         let frames: u32 = arg_value(&args, "--frames").and_then(|s| s.parse().ok()).unwrap_or(105);
         let source = arg_value(&args, "--source").map(std::path::PathBuf::from);
+        let linear = args.iter().any(|a| a == "--linear");
         let gpu = gfx::device::Gpu::new().expect("D3D11 device");
         let mut renderer = gfx::renderer::Renderer::new(&gpu).expect("shaders");
-        match App::render_clip(&gpu, &mut renderer, &style, cfg.max_tilt_deg, cfg.background_rgba(), source.as_deref(), frames, std::path::Path::new(&dir)) {
+        match App::render_clip(&gpu, &mut renderer, &style, cfg.max_tilt_deg, cfg.background_rgba(), source.as_deref(), frames, linear, std::path::Path::new(&dir)) {
             Ok(()) => println!("wrote {frames} frames to {dir}"),
             Err(e) => {
                 eprintln!("render clip failed: {e}");

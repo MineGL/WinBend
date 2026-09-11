@@ -1,5 +1,36 @@
 # Generating the "real lid" shots with Gemini (Veo)
 
+## Recommended: black screen + compositing
+
+Ask Veo only for what it is good at, a laptop whose lid closes on its own with the screen
+**switched off**. `make-composite.ps1` then tracks the black screen in every frame and projects
+WinBend's real fold onto it, with the fold amount following the lid angle. That is the honest
+version of the effect, and it looks right because the perspective of the physical screen is real.
+
+> Product commercial shot, camera at desk height facing a modern thin silver laptop with a light
+> grey keyboard on a clean light wooden desk, in a bright room. The laptop screen is completely
+> switched off, pure black, glossy. The lid slowly closes by itself in one continuous smooth
+> motion, no hands, no people, the lid never reopens. Static camera, soft daylight, shallow depth
+> of field, no text, no logos, no watermark. 8 seconds, vertical 9:16.
+
+Opening shot: same prompt with "starts closed and slowly lifts open by itself in one continuous
+motion". The screen must stay pure black the whole time; add "the screen stays off and black,
+no reflections of light" if Veo lights it up.
+
+Then:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File promo\make-composite.ps1 -Clip promo\clips\close-black.mp4 -Style silk
+powershell -ExecutionPolicy Bypass -File promo\make-composite.ps1 -Clip promo\clips\open-black.mp4 -Style silk
+powershell -ExecutionPolicy Bypass -File promo\make-live.ps1 -Clips promo\clips\close-black-winbend.mp4,promo\clips\open-black-winbend.mp4 -Music "C:\Users\MineGL\Downloads\Cutscene Crush - Blue Deer Studio.mp3"
+```
+
+If the desk or keyboard gets picked up as "screen", lower `-Threshold` (e.g. 30) so only truly
+black pixels count. If the screen is missed, the fix is the prompt, not the threshold: ask for a
+darker screen and a lighter room.
+
+## Alternative: let Veo invent the on-screen effect (less faithful)
+
 Open the Gemini app → **Video** (Veo). Ask for **vertical 9:16** and **8 seconds** where the
 option exists; otherwise generate 16:9 and let `make-live.ps1` letterbox it. Generate each shot
 two or three times and keep the take where the screen content stays stable and the lid motion

@@ -6,3 +6,4 @@
 /dist/*.exe
 /promo/out
 /promo/clips/*.mp4
+/promo/composite/target

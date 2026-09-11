@@ -1189,7 +1189,7 @@ impl App {
 
     /// Offline render for `--render-clip`: a full close-hold-open cycle as numbered PNG frames,
     /// from a PNG (`source`) or the live primary monitor. Used to produce promo videos.
-    pub fn render_clip(gpu: &Gpu, renderer: &mut Renderer, style: &StyleParams, max_tilt: f32, bg: [f32; 4], source: Option<&std::path::Path>, frames: u32, out_dir: &std::path::Path) -> Result<()> {
+    pub fn render_clip(gpu: &Gpu, renderer: &mut Renderer, style: &StyleParams, max_tilt: f32, bg: [f32; 4], source: Option<&std::path::Path>, frames: u32, linear: bool, out_dir: &std::path::Path) -> Result<()> {
         use windows::Win32::Graphics::Direct3D11::*;
         use windows::Win32::Graphics::Dxgi::Common::*;
         fn fail<E>(_: E) -> windows::core::Error { windows::core::Error::from_hresult(windows::core::HRESULT(-2147467259)) }
@@ -1236,7 +1236,11 @@ impl App {
         for i in 0..frames {
             // Close over the first 45 %, rest folded, then open: the same feel as a hotkey fold.
             let u = i as f32 / (frames - 1) as f32;
-            let t = if u < 0.45 {
+            // `linear`: t runs 0..1 straight through (frame i = fold amount i/(N-1)), for
+            // compositors that pick a frame by measured lid angle.
+            let t = if linear {
+                u
+            } else if u < 0.45 {
                 ease_in_out(u / 0.45)
             } else if u < 0.58 {
                 1.0
