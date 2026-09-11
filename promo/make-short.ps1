@@ -1,11 +1,13 @@
 # Builds a vertical 1080x1920 promo clip (YouTube Short / Reel / TikTok) showing all four
 # fold styles on a clean showcase desktop, with title and call-to-action cards.
 #
-#   powershell -ExecutionPolicy Bypass -File promo\make-short.ps1            # synthetic desktop
-#   powershell -ExecutionPolicy Bypass -File promo\make-short.ps1 -Screen    # your real screen
+#   powershell -ExecutionPolicy Bypass -File promo\make-short.ps1             # painted showcase desktop
+#   powershell -ExecutionPolicy Bypass -File promo\make-short.ps1 -Wallpaper  # your current wallpaper, no windows
+#   powershell -ExecutionPolicy Bypass -File promo\make-short.ps1 -Image x.jpg # any picture (jpg/png/bmp)
+#   powershell -ExecutionPolicy Bypass -File promo\make-short.ps1 -Screen     # your real screen as it is now
 #
 # Needs: a release build (cargo build --release) and ffmpeg on PATH (winget install Gyan.FFmpeg).
-param([switch]$Screen, [string]$Out = "promo\out\winbend-short.mp4")
+param([switch]$Screen, [switch]$Wallpaper, [string]$Image, [string]$Out = "promo\out\winbend-short.mp4")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $root
@@ -15,8 +17,41 @@ $ffmpeg = (Get-Command ffmpeg -ErrorAction Stop).Source
 $work = "promo\out"
 New-Item -ItemType Directory -Force $work | Out-Null
 
+# Fit any picture to the primary screen (cover: scale up, crop the overflow) and save it as PNG,
+# which is the format --render-clip reads.
+function Fit-Image($path, $outPng) {
+    Add-Type -AssemblyName System.Drawing
+    Add-Type -AssemblyName System.Windows.Forms
+    # Without this, a 125 % display scale reports 1536x864 instead of the real 1920x1080.
+    if (-not ("PromoDpi" -as [type])) { Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public class PromoDpi { [DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); }' }
+    [PromoDpi]::SetProcessDPIAware() | Out-Null
+    $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $W = [Math]::Max(1280, $b.Width); $H = [Math]::Max(720, $b.Height)
+    $src = [System.Drawing.Image]::FromFile((Resolve-Path $path).Path)
+    $scale = [Math]::Max($W / $src.Width, $H / $src.Height)
+    $sw = [int]([Math]::Ceiling($src.Width * $scale)); $sh = [int]([Math]::Ceiling($src.Height * $scale))
+    $bmp = New-Object System.Drawing.Bitmap $W, $H
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.InterpolationMode = 'HighQualityBicubic'
+    $g.DrawImage($src, [int](($W - $sw) / 2), [int](($H - $sh) / 2), $sw, $sh)
+    $g.Dispose(); $src.Dispose()
+    $bmp.Save($outPng, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
+    Write-Host "wrote $outPng (${W}x${H} from $path)"
+}
+
 $source = @()
-if (-not $Screen) {
+if ($Screen) {
+    # live capture of the primary monitor, nothing to prepare
+} elseif ($Image) {
+    Fit-Image $Image "$work\desktop.png"
+    $source = @("--source", "$work\desktop.png")
+} elseif ($Wallpaper) {
+    $wp = (Get-ItemProperty 'HKCU:\Control Panel\Desktop' -ErrorAction SilentlyContinue).WallPaper
+    if (-not $wp -or -not (Test-Path $wp)) { $wp = "$env:APPDATA\Microsoft\Windows\Themes\TranscodedWallpaper" }
+    if (-not (Test-Path $wp)) { throw "could not find the current wallpaper; use -Image <file> instead" }
+    Fit-Image $wp "$work\desktop.png"
+    $source = @("--source", "$work\desktop.png")
+} else {
     powershell -NoProfile -ExecutionPolicy Bypass -File promo\make-desktop.ps1 "$work\desktop.png"
     $source = @("--source", "$work\desktop.png")
 }
@@ -29,7 +64,6 @@ $styles = @(
     @{ id = "origami"; name = "Origami"; blurb = "Creases into an accordion" }
 )
 foreach ($s in $styles) {
-    if ((Test-Path "$work\$($s.id)\0095.png") -and -not $Screen) { continue }  # frames already rendered
     if (Test-Path "$work\$($s.id)") { Remove-Item -Recurse -Force "$work\$($s.id)" }
     & $exe --render-clip "$work\$($s.id)" --style $s.id --frames 96 @source | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "render failed for $($s.id)" }
