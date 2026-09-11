@@ -61,7 +61,8 @@ foreach ($clip in $Clips) {
     else       { $fit = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=${black}" }
     $cap = if ($i -lt $Captions.Count) { $Captions[$i] } else { "" }
     $vf = "${fit},fps=${fps},setsar=1"
-    if ($cap) { $vf += "," + (Draw $cap $light 96 $white 260 ":enable='between(t\,0.3\,2.2)':alpha='min(1\,(t-0.3)/0.3)*min(1\,(2.2-t)/0.3)'") }
+    # shadow + translucent box keep the caption legible over a bright room
+    if ($cap) { $vf += "," + (Draw $cap $light 96 $white 260 ":shadowcolor=black@0.55:shadowx=3:shadowy=3:box=1:boxcolor=black@0.28:boxborderw=22:enable='between(t\,0.3\,2.4)':alpha='min(1\,(t-0.3)/0.3)*min(1\,(2.4-t)/0.3)'") }
     $vf += ",fade=t=in:st=0:d=0.3,fade=t=out:st=$($keep - 0.3):d=0.3"
     Run $seg @("-i", $clip, "-t", "$keep", "-vf", $vf, "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "$fps")
     $parts += $seg
