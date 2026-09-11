@@ -63,9 +63,10 @@ $parts = @($title)
 $n = 1
 foreach ($s in $styles) {
     $seg = "$work\0$n-$($s.id).mp4"
-    $vf = "scale=1000:-2,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=${bg}," +
-          (Text $s.name $fontB 96 "white" 520) + "," +
-          (Text $s.blurb $fontR 42 "0x9ea6bd" 1330) + "," +
+    # Zoom so the desktop fills the width: scale to 1500 px, crop the middle 1080, then pad to 9:16.
+    $vf = "scale=1500:-2,crop=1080:ih:(iw-1080)/2:0,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=${bg}," +
+          (Text $s.name $fontB 96 "white" 400) + "," +
+          (Text $s.blurb $fontR 42 "0x9ea6bd" 1440) + "," +
           (Text "$n / 4" $fontR 34 "0x5b6380" 1780) + ",fade=t=in:st=0:d=0.25,fade=t=out:st=2.95:d=0.25"
     Run $seg @("-framerate", "$fps", "-i", "$work\$($s.id)\%04d.png", "-vf", $vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "$fps", "-t", "3.2")
     $parts += $seg
@@ -76,8 +77,8 @@ foreach ($s in $styles) {
 $cta = "$work\09-cta.mp4"
 $vf = (Text "Free & open source" $fontB 82 "white" 760 $fadeIn) + "," +
       (Text "winbend.me" $fontB 96 "0x8f8bff" 880 $fadeIn) + "," +
-      (Text "Ctrl+Alt+B to fold  ·  follows your lid via webcam" $fontR 38 "0x9ea6bd" 1040 $fadeIn) + "," +
-      (Text "MIT licensed  ·  no account  ·  no network" $fontR 34 "0x5b6380" 1120 $fadeIn) + ",fade=t=out:st=3.0:d=0.4"
+      (Text "Ctrl+Alt+B to fold   |   follows your lid via webcam" $fontR 38 "0x9ea6bd" 1040 $fadeIn) + "," +
+      (Text "MIT licensed   |   no account   |   no network" $fontR 34 "0x5b6380" 1120 $fadeIn) + ",fade=t=out:st=3.0:d=0.4"
 Run $cta @("-f", "lavfi", "-i", "color=c=${bg}:s=1080x1920:r=${fps}:d=3.4", "-vf", $vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "$fps")
 $parts += $cta
 
