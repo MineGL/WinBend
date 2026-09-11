@@ -23,6 +23,8 @@ $dur = [double](& $ffprobe -v error -show_entries format=duration -of default=nw
 $fadeOut = [Math]::Max(0.5, $dur - 1.8)
 
 if ($Music) {
+    # A real track is already mastered: keep it at unity unless -Volume was given explicitly.
+    if (-not $PSBoundParameters.ContainsKey('Volume')) { $Volume = 1.0 }
     $af = "atrim=0:${dur},afade=t=in:st=0:d=1.2,afade=t=out:st=${fadeOut}:d=1.8,volume=${Volume},alimiter=limit=0.95"
     & $ffmpeg -y -loglevel error -i $In -stream_loop -1 -i $Music -filter_complex "[1:a]${af}[a]" -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 192k -shortest $Out
     if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed" }
