@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WinBend — your desktop folds like a lid closing</title>
+<meta name="description" content="WinBend folds your Windows desktop like a laptop lid closing: live capture, GPU-rendered tilt, bend, blur and shade. Free and open source.">
+<meta property="og:title" content="WinBend">
+<meta property="og:description" content="Your desktop folds like a lid closing. Free, open source, for Windows 10/11.">
+<meta property="og:url" content="https://winbend.me">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141725'/%3E%3Cpath d='M18 46V26l28-6v26z' fill='%23ecefff'/%3E%3Crect x='14' y='46' width='36' height='3' fill='%2378beff'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#0d0f16;--bg2:#141725;--card:#181c2a;--ink:#eef0f7;--muted:#9ea6bd;--line:#252a3b;--accent:#8f8bff;--accent2:#78beff;font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.6;font-size:16px}
+a{color:var(--accent2)}h1,h2,h3{line-height:1.15;letter-spacing:-.02em;margin:0 0 .5em}h1{font-size:clamp(38px,6vw,64px);font-weight:700}h2{font-size:clamp(26px,3.4vw,36px)}h3{font-size:18px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+header{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;text-decoration:none;color:var(--ink)}
+.mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(140deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#0d0f16;font-size:18px;transform:rotate(-5deg)}
+nav a{color:var(--muted);text-decoration:none;margin-left:22px;font-size:15px}nav a:hover{color:var(--ink)}
+.hero{padding:40px 0 30px;display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+.hero p.lead{font-size:19px;color:var(--muted);max-width:32em}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 20px;border-radius:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);color:var(--ink);background:var(--card)}
+.btn.primary{background:var(--ink);color:#0d0f16;border-color:var(--ink)}.btn:hover{border-color:var(--accent)}
+.fine{font-size:13px;color:var(--muted)}
+/* CSS demo of the fold */
+.demo{perspective:900px;perspective-origin:50% 60%;aspect-ratio:16/10;position:relative}
+.screen{position:absolute;inset:0;border-radius:14px;overflow:hidden;transform-origin:50% 100%;background:
+ radial-gradient(120% 90% at 20% 10%,#6d7cff 0%,#3b3f8f 35%,#1c2140 70%,#0e1120 100%);
+ box-shadow:0 30px 80px #0009,inset 0 0 0 1px #ffffff18;animation:fold 6.5s cubic-bezier(.65,0,.35,1) infinite}
+.screen:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 55%,#0000004d 100%);animation:shade 6.5s cubic-bezier(.65,0,.35,1) infinite}
+.win{position:absolute;background:#f6f7fbe6;border-radius:8px;box-shadow:0 10px 30px #0006}
+.win.a{left:8%;top:14%;width:52%;height:56%}.win.b{left:46%;top:30%;width:44%;height:50%;background:#1d2130e6}
+.win i{display:block;height:8px;margin:12px 12px 0;border-radius:4px;background:#c7cbe0}.win.b i{background:#3a4060}.win i:nth-child(2){width:60%}.win i:nth-child(3){width:35%}
+.bar{position:absolute;left:0;right:0;bottom:0;height:8%;background:#0f1220cc;display:flex;justify-content:center;gap:6%;align-items:center}.bar b{width:4%;aspect-ratio:1;border-radius:30%;background:#ffffff66}
+.deck{position:absolute;left:-3%;right:-3%;bottom:-6%;height:6%;border-radius:0 0 14px 14px;background:linear-gradient(180deg,#1c2033,#0b0d16)}
+@keyframes fold{0%,12%{transform:rotateX(0)}45%,58%{transform:rotateX(84deg)}90%,100%{transform:rotateX(0)}}
+@keyframes shade{0%,12%{opacity:0}45%,58%{opacity:1}90%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.screen,.screen:before{animation:none;transform:rotateX(38deg)}}
+section{padding:56px 0;border-top:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.card p{color:var(--muted);margin:0;font-size:15px}
+.kbd{font:13px Consolas,monospace;background:#0d0f16;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:2px 7px}
+.req{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.wallet{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+.wallet:last-child{border-bottom:0}.wallet code{font:13px Consolas,monospace;color:var(--muted);overflow-wrap:anywhere}
+.wallet button{border:1px solid var(--line);background:var(--bg2);color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;font-size:14px}.wallet button:hover{border-color:var(--accent)}
+footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+@media (max-width:820px){.hero{grid-template-columns:1fr}.grid,.req{grid-template-columns:1fr}nav a{margin-left:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="brand" href="#"><span class="mark">◩</span>WinBend</a>
+  <nav><a href="#features">Features</a><a href="#download">Download</a><a href="#donate">Donate</a><a href="https://github.com/MineGL/winbend">GitHub</a></nav>
+</header>
+
+<section class="hero" style="border-top:0">
+  <div>
+    <h1>Your desktop bends as you close the lid.</h1>
+    <p class="lead">WinBend captures your live desktop and folds it like a laptop lid coming down: it tilts, bends, blurs and settles. Press a key, or let it follow the lid through your webcam.</p>
+    <div class="cta">
+      <a class="btn primary" id="download" href="https://github.com/MineGL/winbend/releases/latest">Download for Windows</a>
+      <a class="btn" href="https://github.com/MineGL/winbend">Source on GitHub</a>
+    </div>
+    <p class="fine">Free and open source (MIT). One file, no installer, no account, no network. Windows 10 2004+ / Windows 11.</p>
+  </div>
+  <div class="demo" aria-hidden="true">
+    <div class="screen">
+      <div class="win a"><i></i><i></i><i></i></div>
+      <div class="win b"><i></i><i></i><i></i></div>
+      <div class="bar"><b></b><b></b><b></b><b></b><b></b></div>
+    </div>
+    <div class="deck"></div>
+  </div>
+</section>
+
+<section id="features">
+  <h2>How it works</h2>
+  <div class="grid">
+    <div class="card"><h3>Live desktop</h3><p>Windows.Graphics.Capture feeds the real screen into a Direct3D 11 renderer, so windows and wallpaper move together. Anti-aliased, 60 fps.</p></div>
+    <div class="card"><h3>Follow the lid</h3><p>Opt-in webcam tracking turns camera motion into a lid angle. The fold runs through the last degrees before shut and lifts as you open. Guided calibration fits it to your laptop.</p></div>
+    <div class="card"><h3>Three styles</h3><p>Silk, Shade and Frost, plus Custom with perspective, blur, shadow, bend, vignette and sheen sliders. A live preview shows your own desktop while you tune.</p></div>
+    <div class="card"><h3>Sleep &amp; wake</h3><p>Fold finishes as the PC sleeps and the desktop is still folded when the screen returns, then lifts. Optional: let WinBend handle the lid so the fold plays before sleep.</p></div>
+    <div class="card"><h3>Shortcuts</h3><p><span class="kbd">Ctrl+Alt+B</span> folds or unfolds anywhere. <span class="kbd">Ctrl+Alt+C</span> toggles lid tracking. Both are changeable with a press-a-key picker.</p></div>
+    <div class="card"><h3>Private by design</h3><p>Frames are processed on your PC and dropped immediately. Nothing is recorded, saved or uploaded. The camera light is on whenever tracking is on.</p></div>
+  </div>
+</section>
+
+<section id="download">
+  <h2>Download</h2>
+  <div class="req">
+    <div class="card"><h3>Get it</h3><p>Grab <code>WinBend-&lt;version&gt;-win64.zip</code> from the <a href="https://github.com/MineGL/winbend/releases/latest">latest release</a>, unzip, run <code>winbend.exe</code>. It lives in the tray; a welcome window opens the first time.</p></div>
+    <div class="card"><h3>Requirements</h3><p>Windows 10 version 2004 or later, Windows 11 recommended. Any Direct3D 11 GPU. Microsoft Edge WebView2 Runtime for the settings window (included with Windows 11).</p></div>
+    <div class="card"><h3>Unsigned, for now</h3><p>Windows may show “Windows protected your PC” for a new download: choose <em>More info → Run anyway</em>. The source is public and you can build it yourself.</p></div>
+  </div>
+</section>
+
+<section id="donate">
+  <h2>Keep it going</h2>
+  <p class="lead" style="color:var(--muted)">WinBend is free. If it makes you smile, a donation helps pay for code signing and time.</p>
+  <div class="cta" style="margin-top:14px"><a class="btn primary" href="https://github.com/sponsors/MineGL">Sponsor on GitHub</a></div>
+  <div class="card" style="margin-top:22px">
+    <h3>Crypto</h3>
+    <div class="wallet"><div><strong>Ethereum (ERC-20)</strong><br><code>0xf177d181a287f43e45b14235640693d5daac125a</code></div><button data-copy="0xf177d181a287f43e45b14235640693d5daac125a">Copy</button></div>
+    <div class="wallet"><div><strong>BNB Smart Chain (BEP-20)</strong><br><code>0xf177d181a287f43e45b14235640693d5daac125a</code></div><button data-copy="0xf177d181a287f43e45b14235640693d5daac125a">Copy</button></div>
+    <div class="wallet"><div><strong>Tron (TRC-20)</strong><br><code>TWMBxrG7ERvYYejd2PMuLJS3jnjQCrArAx</code></div><button data-copy="TWMBxrG7ERvYYejd2PMuLJS3jnjQCrArAx">Copy</button></div>
+    <p class="fine" style="margin:14px 0 0">Send only on the network named next to each address.</p>
+  </div>
+</section>
+
+<footer>
+  WinBend is MIT licensed. Inspired by Bendy for macOS. Built with Rust, Direct3D 11 and Windows.Graphics.Capture.
+  <br><a href="https://github.com/MineGL/winbend">github.com/MineGL/winbend</a> · <a href="https://github.com/MineGL/winbend/issues">Report an issue</a>
+</footer>
+</div>
+<script>
+document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);const t=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=t,1500);}catch{const r=document.createRange();r.selectNodeContents(b.parentElement.querySelector('code'));const s=getSelection();s.removeAllRanges();s.addRange(r);}}));
+</script>
+</body>
+</html>

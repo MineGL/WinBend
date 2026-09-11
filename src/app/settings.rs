@@ -207,6 +207,7 @@ impl App {
             "reload_settings" => self.reload_settings(),
             "open_url" => match arg.as_str().or_else(|| arg.get("which").and_then(Value::as_str)) {
                 Some("github") => win::open_url(crate::links::GITHUB_URL),
+                Some("site") => win::open_url(crate::links::SITE_URL),
                 Some("donate") => win::open_url(crate::links::DONATE_URL),
                 Some("signin") => win::open_url("ms-settings:signinoptions"),
                 Some("webview2") => win::open_url("https://developer.microsoft.com/microsoft-edge/webview2/"),

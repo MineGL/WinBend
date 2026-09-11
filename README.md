@@ -8,6 +8,8 @@ foldable-phone "fold" animation.
 Free and open source (MIT). One `winbend.exe`, no installer, no account, no network.
 Lives in the tray. If it makes you smile, [donations](#donate) keep it going.
 
+Website: **[winbend.me](https://winbend.me)** · Download: [latest release](https://github.com/MineGL/winbend/releases/latest)
+
 ## What it does
 
 | Trigger | Behaviour |
@@ -163,21 +165,33 @@ sheen = 0.8
 
 WinBend is free. If you enjoy it, you can support development:
 
-- **GitHub Sponsors**: the *Sponsor* button on this repository, or *Donate* in the tray menu.
-- **Crypto**: addresses are listed in the app under Settings → About → Support WinBend, with a
-  copy button, and below once published.
+- **GitHub Sponsors**: [github.com/sponsors/MineGL](https://github.com/sponsors/MineGL), the
+  *Sponsor* button on this repository, or *Donate* in the tray menu.
+- **Crypto** (send only on the network named):
+  - Ethereum (ERC-20): `0xf177d181a287f43e45b14235640693d5daac125a`
+  - BNB Smart Chain (BEP-20): `0xf177d181a287f43e45b14235640693d5daac125a`
+  - Tron (TRC-20): `TWMBxrG7ERvYYejd2PMuLJS3jnjQCrArAx`
+
+  The same addresses are in the app under Settings → About → Support WinBend, with a copy button.
 
 ## Publishing checklist (maintainer)
 
-1. `src/links.rs`: set `GITHUB_URL`, `DONATE_URL` (your GitHub Sponsors page) and the
-   `WALLETS` list (coin + network + address). `.github/FUNDING.yml`: your GitHub user name.
-   `LICENSE`: your name. Rebuild so the About page shows the new values.
-2. Create the empty repository on GitHub, then push:
-   `git remote add origin https://github.com/YOUR_GITHUB_USER/winbend.git && git push -u origin main`.
+1. Create the empty repository `MineGL/winbend` on GitHub (no README), then push:
+   `git remote add origin https://github.com/MineGL/winbend.git && git push -u origin main`.
+2. **Website** (`docs/` is a static landing page; `docs/CNAME` holds `winbend.me`):
+   GitHub → repository Settings → Pages → Source: *Deploy from a branch*, branch `main`,
+   folder `/docs`. Then at Namecheap → Domain List → winbend.me → Advanced DNS, add:
+   `A @ 185.199.108.153`, `A @ 185.199.109.153`, `A @ 185.199.110.153`, `A @ 185.199.111.153`,
+   `CNAME www MineGL.github.io`. Back in GitHub Pages set the custom domain `winbend.me`, wait
+   for the DNS check, tick *Enforce HTTPS*. GitHub issues the certificate itself; the SSL
+   certificate bought from Namecheap is not needed for Pages (keep it if you later move to a
+   host where you control the server).
 3. Tag a release: `git tag v0.1.0 && git push --tags`. The workflow builds, runs the tests and
-   the settings-window smoke test, and attaches `WinBend-0.1.0-win64.zip` to the release.
-4. Enable GitHub Sponsors for your account (Stripe Connect payout) and add a screenshot or a
-   10-second clip of the fold to the README. The effect is the ad.
+   the settings-window smoke test, and attaches `WinBend-0.1.0-win64.zip` to the release, which
+   is where the site's Download button points.
+4. Enable GitHub Sponsors for the MineGL account (Stripe Connect payout). Until it is approved,
+   the Sponsor links show GitHub's "not yet sponsorable" page; crypto works immediately.
+5. Replace the CSS demo on the landing page with a real 10-second clip when you have one.
 
 ## Project layout
 
