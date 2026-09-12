@@ -4,7 +4,10 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    # Website and documentation changes do not need a Rust build.
+    paths-ignore: ["docs/**", "*.md", "LICENSE"]
   pull_request:
+    paths-ignore: ["docs/**", "*.md", "LICENSE"]
 
 # The Release step creates a GitHub release and uploads the artifacts; new repositories default
 # the workflow token to read-only, so grant write access to repository contents explicitly.
