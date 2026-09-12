@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /laptop-teaser.html
+
+Sitemap: https://winbend.me/sitemap.xml

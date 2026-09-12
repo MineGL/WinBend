@@ -3,12 +3,85 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WinBend — your desktop folds like a lid closing</title>
-<meta name="description" content="WinBend folds your Windows desktop like a laptop lid closing: live capture, GPU-rendered tilt, bend, blur and shade. Free and open source.">
-<meta property="og:title" content="WinBend">
-<meta property="og:description" content="Your desktop folds like a lid closing. Free, open source, for Windows 10/11.">
-<meta property="og:url" content="https://winbend.me">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141725'/%3E%3Cpath d='M18 46V26l28-6v26z' fill='%23ecefff'/%3E%3Crect x='14' y='46' width='36' height='3' fill='%2378beff'/%3E%3C/svg%3E">
+<title>WinBend – Fold your Windows desktop when you close the lid</title>
+<meta name="description" content="Free, open-source Windows 10/11 app: your desktop folds, bends and blurs as you close the laptop lid, like the iPhone Duo fold. Works on any laptop with a webcam. Bendy for Windows.">
+<link rel="canonical" href="https://winbend.me/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#0d0f16">
+<meta name="author" content="MineGL">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WinBend">
+<meta property="og:title" content="WinBend – your Windows desktop folds when you close the lid">
+<meta property="og:description" content="Free, open-source desktop fold effect for Windows 10/11. Follows your laptop lid through the webcam, or press Ctrl+Alt+B. Four styles, live preview, no account.">
+<meta property="og:url" content="https://winbend.me/">
+<meta property="og:image" content="https://winbend.me/media/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A laptop lid closing while the Windows desktop on its screen folds down with it. Introducing WinBend.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="WinBend – your Windows desktop folds when you close the lid">
+<meta name="twitter:description" content="Free, open-source desktop fold effect for Windows 10/11. Follows your laptop lid through the webcam, or press Ctrl+Alt+B.">
+<meta name="twitter:image" content="https://winbend.me/media/og.jpg">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141725'/%3E%3Cpath d='M18 46V26l28-6v26z' fill='%23ecefff'/%3E%3Crect x='14' y='46' width='36' height='3' fill='%2378beff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/media/apple-touch-icon.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://winbend.me/#app",
+      "name": "WinBend",
+      "url": "https://winbend.me/",
+      "description": "WinBend folds your Windows desktop like a laptop lid closing: the live desktop tilts, bends, blurs and shades on the GPU, following the lid through your webcam or on a hotkey. Free and open source.",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Desktop customization",
+      "operatingSystem": "Windows 10, Windows 11",
+      "softwareVersion": "0.1.1",
+      "downloadUrl": "https://github.com/MineGL/WinBend/releases/latest",
+      "installUrl": "https://github.com/MineGL/WinBend/releases/latest",
+      "softwareRequirements": "Windows 10 version 2004 or later, Direct3D 11 GPU",
+      "fileSize": "3MB",
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "screenshot": "https://winbend.me/media/og.jpg",
+      "image": "https://winbend.me/media/og.jpg",
+      "author": { "@type": "Person", "name": "MineGL", "url": "https://github.com/MineGL" },
+      "sameAs": ["https://github.com/MineGL/WinBend"],
+      "featureList": [
+        "Desktop folds, bends and blurs as the laptop lid closes",
+        "Webcam lid tracking with guided calibration",
+        "Hotkey fold (Ctrl+Alt+B) on any desktop",
+        "Four styles: Silk, Shade, Frost, Origami, plus custom sliders",
+        "Live preview of your own desktop in the settings window",
+        "Fold on sleep, unfold on wake",
+        "Per-user installer or portable exe, no account, no network"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://winbend.me/#site",
+      "url": "https://winbend.me/",
+      "name": "WinBend",
+      "publisher": { "@type": "Person", "name": "MineGL" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://winbend.me/#faq",
+      "mainEntity": [
+        { "@type": "Question", "name": "Is WinBend free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. WinBend is free and open source under the MIT license. There is no trial, no account and no license key. Donations are welcome but optional." } },
+        { "@type": "Question", "name": "Is WinBend the Windows version of Bendy?", "acceptedAnswer": { "@type": "Answer", "text": "WinBend is an independent Windows app inspired by Bendy for macOS and the iPhone Duo fold animation. It renders the same kind of effect (the desktop tilts, bends, blurs and shades as the lid closes) on Windows 10 and Windows 11." } },
+        { "@type": "Question", "name": "Does my laptop need a hinge angle sensor?", "acceptedAnswer": { "@type": "Answer", "text": "No. Most Windows laptops have no hinge sensor, so WinBend can track the lid through the webcam instead: as the lid tilts, the camera image shifts, and WinBend turns that into a lid angle. A short guided calibration fits it to your laptop. Laptops that do have a hinge sensor or lid accelerometer can use those directly." } },
+        { "@type": "Question", "name": "Does it work without a webcam?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Press Ctrl+Alt+B to fold and unfold on any desktop, let the desktop fold when the PC sleeps and unfold when it wakes, or fold automatically when idle." } },
+        { "@type": "Question", "name": "Which Windows versions are supported?", "acceptedAnswer": { "@type": "Answer", "text": "Windows 10 version 2004 (May 2020) or later and Windows 11, on any PC with a Direct3D 11 GPU. The settings window uses the Microsoft Edge WebView2 Runtime, which is included with Windows 11." } },
+        { "@type": "Question", "name": "Is my screen recorded or uploaded?", "acceptedAnswer": { "@type": "Answer", "text": "No. Desktop frames and webcam frames are processed on your PC and dropped immediately. WinBend makes no network connections. The camera light is on whenever webcam tracking is enabled." } }
+      ]
+    }
+  ]
+}
+</script>
 <style>
 :root{--bg:#0d0f16;--bg2:#141725;--card:#181c2a;--ink:#eef0f7;--muted:#9ea6bd;--line:#252a3b;--accent:#8f8bff;--accent2:#78beff;font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.6;font-size:16px}
@@ -92,13 +165,13 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
 <div class="wrap">
 <header>
   <a class="brand" href="#"><span class="mark">◩</span>WinBend</a>
-  <nav><a href="#features">Features</a><a href="#styles">Styles</a><a href="#download">Download</a><a href="#donate">Donate</a><a href="https://github.com/MineGL/WinBend">GitHub</a></nav>
+  <nav><a href="#features">Features</a><a href="#styles">Styles</a><a href="#download">Download</a><a href="#faq">FAQ</a><a href="#donate">Donate</a><a href="https://github.com/MineGL/WinBend">GitHub</a></nav>
 </header>
 
 <section class="hero" style="border-top:0">
   <div>
-    <h1>Your desktop bends as you close the lid.</h1>
-    <p class="lead">WinBend captures your live desktop and folds it like a laptop lid coming down: it tilts, bends, blurs and settles. Press a key, or let it follow the lid through your webcam.</p>
+    <h1>Your Windows desktop bends as you close the lid.</h1>
+    <p class="lead">WinBend captures your live desktop and folds it like a laptop lid coming down: it tilts, bends, blurs and settles, the iPhone Duo fold on the laptop you already own. Press a key, or let it follow the lid through your webcam. Free and open source for Windows 10 and 11.</p>
     <div class="cta">
       <a class="btn primary" id="download" href="https://github.com/MineGL/WinBend/releases/latest">Download for Windows</a>
       <a class="btn" href="https://github.com/MineGL/WinBend">Source on GitHub</a>
@@ -106,7 +179,8 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
     <p class="fine">Free and open source (MIT). Installer or a single portable file, no account, no network. Windows 10 2004+ / Windows 11.</p>
   </div>
   <figure class="teaser">
-    <iframe id="teaser-laptop" src="laptop-teaser.html?clean=1&amp;still=1&amp;w=1280&amp;h=800&amp;cam=low&amp;zone=75&amp;dur=8&amp;drift=0&amp;t=0.12" title="A laptop lid closes while WinBend folds the desktop in sync, then both reopen." loading="lazy"></iframe>    <figcaption><span>Close the lid. Watch Windows follow. <span class="fine">Silk effect · 3D illustration</span></span><button id="teaser-toggle" type="button" hidden>Play animation</button></figcaption>
+    <iframe id="teaser-laptop" src="laptop-teaser.html?clean=1&amp;still=1&amp;w=1280&amp;h=800&amp;cam=low&amp;zone=75&amp;dur=8&amp;drift=0&amp;t=0.12" title="A laptop lid closes while WinBend folds the desktop in sync, then both reopen." loading="lazy"></iframe>
+    <noscript><img src="media/og.jpg" width="1200" height="630" alt="A laptop lid closing while the Windows desktop on its screen folds down with it. Introducing WinBend." style="display:block;width:100%;height:auto"></noscript>    <figcaption><span>Close the lid. Watch Windows follow. <span class="fine">Silk effect · 3D illustration</span></span><button id="teaser-toggle" type="button" hidden>Play animation</button></figcaption>
   </figure></section>
 
 <section id="features">
@@ -141,6 +215,18 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
   </div>
 </section>
 
+<section id="faq">
+  <h2>Questions people ask</h2>
+  <div class="grid">
+    <div class="card"><h3>Is WinBend free?</h3><p>Yes. Free and open source under the MIT license. No trial, no account, no license key. <a href="#donate">Donations</a> are welcome but optional.</p></div>
+    <div class="card"><h3>Is this Bendy for Windows?</h3><p>WinBend is an independent Windows app inspired by <a href="https://trybendy.app" rel="nofollow noopener">Bendy</a> for macOS and the iPhone Duo fold animation. It renders the same kind of effect, the desktop tilting, bending, blurring and shading as the lid closes, on Windows 10 and 11.</p></div>
+    <div class="card"><h3>Do I need a hinge angle sensor?</h3><p>No. Most Windows laptops have none, so WinBend can track the lid through the webcam: as the lid tilts, the camera image shifts, and that becomes a lid angle. A short guided calibration fits it to your laptop. Laptops with a hinge sensor or lid accelerometer can use those directly.</p></div>
+    <div class="card"><h3>Does it work without a webcam?</h3><p>Yes. Press <span class="kbd">Ctrl+Alt+B</span> to fold on any desktop, let the desktop fold when the PC sleeps and unfold when it wakes, or fold automatically when idle.</p></div>
+    <div class="card"><h3>Which Windows versions?</h3><p>Windows 10 version 2004 or later and Windows 11, on any PC with a Direct3D 11 GPU. The settings window uses the Edge WebView2 Runtime, included with Windows 11.</p></div>
+    <div class="card"><h3>Is my screen recorded?</h3><p>No. Desktop and webcam frames are processed on your PC and dropped immediately. WinBend makes no network connections. The camera light is on whenever webcam tracking is enabled.</p></div>
+  </div>
+</section>
+
 <section id="donate">
   <h2>Keep it going</h2>
   <p class="lead" style="color:var(--muted)">WinBend is free. If it makes you smile, a donation helps pay for code signing and time.</p>
@@ -155,8 +241,8 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
 </section>
 
 <footer>
-  WinBend is MIT licensed. Inspired by Bendy for macOS. Built with Rust, Direct3D 11 and Windows.Graphics.Capture.
-  <br><a href="https://github.com/MineGL/WinBend">github.com/MineGL/winbend</a> · <a href="https://github.com/MineGL/WinBend/issues">Report an issue</a>
+  WinBend is MIT licensed. Inspired by Bendy for macOS. Built with Rust, Direct3D 11 and Windows.Graphics.Capture. WinBend is not affiliated with Apple or Microsoft; iPhone and Windows are trademarks of their owners.
+  <br><a href="https://github.com/MineGL/WinBend">github.com/MineGL/WinBend</a> · <a href="https://github.com/MineGL/WinBend/releases/latest">Download</a> · <a href="https://github.com/MineGL/WinBend/issues">Report an issue</a> · <a href="https://github.com/sponsors/MineGL">Sponsor</a>
 </footer>
 </div>
 <script>
