@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WinBend lid animation</title>
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;height:100%;background:#0b0c10;color:#e8eaf2;font:14px "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;overflow:hidden}
+#stage{position:fixed;inset:0;display:grid;place-items:center}
+canvas{display:block;max-width:100vw;max-height:100vh;box-shadow:0 30px 100px #0009}
+#ui{position:fixed;left:16px;top:16px;width:300px;background:#151823e6;border:1px solid #2a2f40;border-radius:14px;padding:14px 16px;backdrop-filter:blur(12px);display:grid;gap:10px;z-index:2}
+#ui h1{font-size:15px;margin:0 0 2px;font-weight:650}
+#ui h1 small{color:#8b93ad;font-weight:400;margin-left:8px}
+label{display:grid;gap:4px;font-size:12px;color:#aeb5cb}
+label>span{display:flex;justify-content:space-between}
+label>span output{color:#e8eaf2;font-variant-numeric:tabular-nums}
+select,input[type=file],button{font:inherit;color:inherit;background:#0f1119;border:1px solid #2a2f40;border-radius:8px;padding:7px 9px}
+input[type=range]{width:100%;accent-color:#8f8bff}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+button{cursor:pointer}button:hover{border-color:#8f8bff}button.primary{background:#8f8bff;border-color:#8f8bff;color:#0b0c10;font-weight:650}
+button.rec{background:#c33;border-color:#c33;color:#fff;font-weight:650}
+#scrub{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(640px,80vw);display:flex;gap:10px;align-items:center;background:#151823e6;border:1px solid #2a2f40;border-radius:12px;padding:10px 14px;z-index:2}
+#scrub input{flex:1}
+#scrub button{width:64px}
+.hint{font-size:11px;color:#8b93ad;line-height:1.5}
+body.clean #ui,body.clean #scrub{display:none}
+kbd{font:11px Consolas,monospace;border:1px solid #2a2f40;border-radius:4px;padding:1px 5px;background:#0f1119}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+
+<div id="ui">
+  <h1>WinBend <small>lid animation</small></h1>
+  <label><span>Style</span>
+    <select id="style"><option value="silk">Silk</option><option value="shade">Shade</option><option value="frost">Frost</option><option value="origami">Origami</option></select></label>
+  <label><span>Fold starts at lid angle<output id="zoneOut">50°</output></span><input id="zone" type="range" min="15" max="110" step="1" value="50"></label>
+  <label><span>Fold complete at lid angle<output id="shutOut">0°</output></span><input id="shut" type="range" min="0" max="80" step="1" value="0"></label>
+  <label><span>Pacing</span><select id="pace"><option value="even">Even (like the app)</option><option value="fold">Dwell in the fold window (video)</option></select></label>
+  <label><span>Lid open angle<output id="openOut">110°</output></span><input id="open" type="range" min="80" max="130" step="1" value="110"></label>
+  <label><span>Cycle length<output id="durOut">7.0 s</output></span><input id="dur" type="range" min="4" max="12" step="0.5" value="7"></label>
+  <div class="row">
+    <label><span>Camera</span><select id="cam"><option value="front">Front</option><option value="top">High front (see the whole close)</option><option value="high">High three-quarter</option><option value="side">Side</option><option value="pov">Point of view</option><option value="low">Low hero</option></select></label>
+    <label><span>Frame</span><select id="aspect"><option value="1080x1920">9:16 Short</option><option value="1920x1080">16:9</option><option value="1080x1080">1:1</option></select></label>
+  </div>
+  <label><span>Camera drift<output id="driftOut">on</output></span><input id="drift" type="range" min="0" max="1" step="1" value="1"></label>
+  <label><span>Desktop picture</span><input id="img" type="file" accept="image/*"></label>
+  <div class="row"><button id="record" class="rec">● Record one cycle</button><button id="clean">Hide UI</button></div>
+  <div class="hint">Record saves a WebM of one full close-and-open cycle at the chosen frame size. <kbd>H</kbd> toggles the UI, <kbd>Space</kbd> pauses. For a PNG sequence use <code>render.js</code>.</div>
+</div>
+
+<div id="scrub"><button id="play">Pause</button><input id="t" type="range" min="0" max="1" step="0.001" value="0"><output id="tOut">0.00</output></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const q = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+
+// ------------------------------------------------------------------ presets (from config.rs)
+const STYLES = {
+  silk:    { perspective: 2.6, blur: 0.0,  shadow: 0.40, bend: 0.30, vignette: 0.25, sheen: 0.8, panels: 1 },
+  shade:   { perspective: 2.4, blur: 0.15, shadow: 0.90, bend: 0.20, vignette: 0.55, sheen: 0.2, panels: 1 },
+  frost:   { perspective: 2.8, blur: 1.0,  shadow: 0.45, bend: 0.35, vignette: 0.30, sheen: 0.4, panels: 1 },
+  origami: { perspective: 3.0, blur: 0.0,  shadow: 0.75, bend: 0.12, vignette: 0.15, sheen: 0.5, panels: 3 },
+};
+const MAX_TILT = 86 * Math.PI / 180;
+
+const state = {
+  style: q.get('style') || 'silk',
+  zone: +(q.get('zone') || 50),
+  // lid angle at which the fold is complete (0 = at the very end; for video ~35 keeps it visible)
+  shut: +(q.get('shut') || 0),
+  // 'fold' pacing spends most of the closing time inside the fold window; 'even' is a plain ease
+  pace: q.get('pace') || 'even',
+  open: +(q.get('open') || 110),
+  dur: +(q.get('dur') || 7),
+  cam: q.get('cam') || 'front',
+  drift: q.get('drift') == null ? 1 : +q.get('drift'),
+  w: +(q.get('w') || 1080), h: +(q.get('h') || 1920),
+  t: +(q.get('t') || 0),
+  playing: !q.has('still'),
+};
+if (q.get('w') && q.get('h')) $('aspect').value = `${state.w}x${state.h}`; else { const [w, h] = $('aspect').value.split('x').map(Number); state.w = w; state.h = h; }
+$('style').value = state.style; $('zone').value = state.zone; $('open').value = state.open; $('dur').value = state.dur; $('cam').value = state.cam; $('drift').value = state.drift;
+if (q.has('clean') || q.has('still')) document.body.classList.add('clean');
+
+// ------------------------------------------------------------------ renderer
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+function fitCanvas() {
+  renderer.setSize(state.w, state.h, false);
+  const s = Math.min(innerWidth / state.w, innerHeight / state.h, 1);
+  canvas.style.width = (state.w * s) + 'px'; canvas.style.height = (state.h * s) + 'px';
+  camera.aspect = state.w / state.h; camera.updateProjectionMatrix();
+}
+
+// ------------------------------------------------------------------ desktop texture (painted, or user image)
+function paintDesktop() {
+  const W = 1920, H = 1080, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const wall = g.createLinearGradient(0, 0, W, H); wall.addColorStop(0, '#5a63ff'); wall.addColorStop(1, '#0e1122');
+  g.fillStyle = wall; g.fillRect(0, 0, W, H);
+  for (const [x, y, r, col, a] of [[300, 250, 900, '#8f8bff', .45], [1500, 750, 1100, '#78beff', .28]]) {
+    const rg = g.createRadialGradient(x, y, 0, x, y, r / 2); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = a; g.fillStyle = rg; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+  }
+  const win = (x, y, w, h, bg, bar, ink, title, lines, mono) => {
+    g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 40; g.shadowOffsetY = 14; g.fillStyle = bg; rr(x, y, w, h, 14); g.fill(); g.restore();
+    g.fillStyle = bar; rr(x, y, w, 54, 14, true); g.fill();
+    g.fillStyle = ink; g.font = '600 20px "Segoe UI",sans-serif'; g.fillText(title, x + 18, y + 34);
+    g.font = (mono ? '20px Consolas,monospace' : '20px "Segoe UI",sans-serif');
+    lines.forEach((ln, i) => { const ly = y + 100 + i * 36; if (typeof ln === 'number') { g.globalAlpha = .35; g.fillRect(x + 24, ly - 8, w * ln, 12); g.globalAlpha = 1; } else g.fillText(ln, x + 24, ly); });
+  };
+  function rr(x, y, w, h, r, topOnly) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); if (topOnly) { g.lineTo(x + w, y + h); g.lineTo(x, y + h); } else { g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); } g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  win(150, 120, 920, 620, '#f6f7fb', '#e9ebf2', '#3a4060', 'Notes — Friday', ['Ship WinBend', .62, .48, '', 'Record the promo', .55, .3, '', 'Answer GitHub issues', .4]);
+  win(900, 300, 870, 640, '#1b1f2e', '#242a3d', '#c9d1e8', 'main.rs — winbend', ['fn fold(t: f32) -> Panel {', '    let theta = t * MAX_TILT;', '    Panel::hinged(theta)', '        .bend(0.3)', '        .sheen(0.8)', '}', '', '// close the lid and watch', .45, .6], true);
+  g.fillStyle = 'rgba(16,18,30,.85)'; g.fillRect(0, H - 56, W, 56);
+  ['#4c8bf5', '#f7c948', '#34c38f', '#e46b6b', '#8f8bff', '#ffffff'].forEach((col, k) => { g.fillStyle = col; rr(W / 2 - 162 + k * 54, H - 44, 32, 32, 8); g.fill(); });
+  g.fillStyle = '#fff'; g.font = '17px "Segoe UI",sans-serif'; g.fillText('9:41', W - 92, H - 24);
+  return c;
+}
+let desktopTex = new THREE.CanvasTexture(paintDesktop());
+desktopTex.encoding = THREE.sRGBEncoding; desktopTex.minFilter = THREE.LinearMipmapLinearFilter; desktopTex.anisotropy = 8;
+let desktopAspect = 16 / 9;
+
+// ------------------------------------------------------------------ fold pass (port of shaders.hlsl)
+const FOLD_W = 1600, FOLD_H = 900;
+const foldRT = new THREE.WebGLMultisampleRenderTarget(FOLD_W, FOLD_H, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, encoding: THREE.sRGBEncoding });
+foldRT.samples = 4;
+const blurA = new THREE.WebGLRenderTarget(FOLD_W / 4, FOLD_H / 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, encoding: THREE.sRGBEncoding });
+const blurB = new THREE.WebGLRenderTarget(FOLD_W / 4, FOLD_H / 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, encoding: THREE.sRGBEncoding });
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+const foldVS = `
+precision highp float;
+attribute vec3 position; attribute vec2 uv;
+uniform float theta, bend, camDist, aspect, panels;
+varying vec2 vUv; varying float vNdotV; varying float vV; varying vec3 vPos; varying vec3 vNrm;
+void profile(float s, float H, out float y, out float z, out float phi) {
+  float L = max(bend * H, 1e-4);
+  if (theta < 1e-5) { y = s; z = 0.0; phi = 0.0; return; }
+  if (bend < 1e-3) { y = s * cos(theta); z = -s * sin(theta); phi = theta; return; }
+  float k = theta / L;
+  if (s <= L) { y = sin(k * s) / k; z = -(1.0 - cos(k * s)) / k; phi = k * s; }
+  else { float ye = sin(theta) / k; float ze = -(1.0 - cos(theta)) / k; y = ye + (s - L) * cos(theta); z = ze - (s - L) * sin(theta); phi = theta; }
+}
+void profileAccordion(float s, float H, float n, out float y, out float z, out float phi) {
+  float seg = H / n;
+  float k = floor(min(s, H - 1e-4) / seg);
+  float local = s - k * seg;
+  float odd = mod(k, 2.0);
+  float dir = 1.0 - 2.0 * odd;
+  float c = cos(theta), sn = sin(theta);
+  y = k * seg * c + local * c;
+  z = -odd * seg * sn - dir * local * sn;
+  float e = max(bend * seg * 0.5, 1e-4);
+  float w = smoothstep(0.0, e, min(local, seg - local));
+  phi = mix(0.0, dir * theta, w);
+}
+void main() {
+  float u = uv.x, v = uv.y;
+  const float H = 2.0;
+  float y, z, phi;
+  if (panels >= 1.5) profileAccordion(v * H, H, floor(panels + 0.5), y, z, phi); else profile(v * H, H, y, z, phi);
+  vec3 p = vec3((u * 2.0 - 1.0) * aspect, -1.0 + y, z);
+  vec3 n = vec3(0.0, sin(phi), cos(phi));
+  vec3 toCam = normalize(vec3(0.0, 0.0, camDist) - p);
+  float w = camDist - p.z;
+  gl_Position = vec4(p.x * camDist / aspect, p.y * camDist, 0.5 * w, w);
+  vUv = vec2(u, v); vNdotV = clamp(dot(n, toCam), 0.0, 1.0); vV = v; vPos = p; vNrm = n;
+}`;
+const foldFS = `
+precision highp float;
+uniform sampler2D texSharp, texBlur;
+uniform float theta, shade, blurMix, vignette, sheen, camDist, panels;
+varying vec2 vUv; varying float vNdotV; varying float vV; varying vec3 vPos; varying vec3 vNrm;
+void main() {
+  vec3 sharp = texture2D(texSharp, vUv).rgb;
+  vec3 col = sharp;
+  if (blurMix > 0.001) col = mix(sharp, texture2D(texBlur, vUv).rgb, blurMix);
+  float lam = pow(vNdotV, 1.6);
+  if (panels >= 1.5) {
+    vec3 Lp = normalize(vec3(0.0, 2.5, camDist * 1.5) - vPos);
+    float diff = clamp(dot(normalize(vNrm), Lp), 0.0, 1.0);
+    lam = mix(0.55, 1.0, diff) * mix(1.0, vNdotV, 0.35);
+  }
+  float lit = mix(1.0, lam, shade);
+  float fold = clamp(theta / 1.4, 0.0, 1.0);
+  float vig = 1.0 - vignette * fold * smoothstep(0.0, 1.0, vV) * 0.9;
+  vec3 lightPos = vec3(0.0, 2.5, camDist * 1.5);
+  vec3 Lv = normalize(lightPos - vPos);
+  vec3 Vv = normalize(vec3(0.0, 0.0, camDist) - vPos);
+  vec3 Hv = normalize(Lv + Vv);
+  float spec = pow(clamp(dot(normalize(vNrm), Hv), 0.0, 1.0), 60.0) * sheen * fold * 0.35;
+  gl_FragColor = vec4(col * lit * vig + spec, 1.0);
+}`;
+const foldMat = new THREE.RawShaderMaterial({
+  vertexShader: foldVS, fragmentShader: foldFS, side: THREE.DoubleSide, depthTest: false,
+  uniforms: { texSharp: { value: desktopTex }, texBlur: { value: blurA.texture }, theta: { value: 0 }, bend: { value: .3 }, camDist: { value: 2.6 }, aspect: { value: 16 / 9 }, shade: { value: .4 }, blurMix: { value: 0 }, vignette: { value: .25 }, sheen: { value: .8 }, panels: { value: 1 } },
+});
+const foldScene = new THREE.Scene();
+foldScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2, 2, 240), foldMat));
+
+// separable blur (13 taps), computed once per desktop image at quarter resolution
+const blurMat = new THREE.RawShaderMaterial({
+  vertexShader: `precision highp float; attribute vec3 position; attribute vec2 uv; varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+  fragmentShader: `precision highp float; uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
+    void main(){ float w[7]; w[0]=0.1964; w[1]=0.1746; w[2]=0.1210; w[3]=0.0655; w[4]=0.0276; w[5]=0.0090; w[6]=0.0023;
+      vec3 acc = texture2D(tex, vUv).rgb * w[0];
+      for (int k = 1; k < 7; k++) { acc += texture2D(tex, vUv + dir * float(k)).rgb * w[k]; acc += texture2D(tex, vUv - dir * float(k)).rgb * w[k]; }
+      gl_FragColor = vec4(acc, 1.0); }`,
+  uniforms: { tex: { value: null }, dir: { value: new THREE.Vector2() } }, depthTest: false,
+});
+const blurScene = new THREE.Scene(); blurScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blurMat));
+function rebuildBlur() {
+  const texel = new THREE.Vector2(1 / blurA.width, 1 / blurA.height);
+  blurMat.uniforms.tex.value = desktopTex; blurMat.uniforms.dir.value.set(0, 0);
+  renderer.setRenderTarget(blurA); renderer.render(blurScene, ortho);
+  for (const step of [1.6, 3.2]) {
+    blurMat.uniforms.tex.value = blurA.texture; blurMat.uniforms.dir.value.set(texel.x * step, 0); renderer.setRenderTarget(blurB); renderer.render(blurScene, ortho);
+    blurMat.uniforms.tex.value = blurB.texture; blurMat.uniforms.dir.value.set(0, texel.y * step); renderer.setRenderTarget(blurA); renderer.render(blurScene, ortho);
+  }
+  renderer.setRenderTarget(null);
+}
+
+function renderFold(t) {
+  const s = STYLES[state.style] || STYLES.silk;
+  const u = foldMat.uniforms;
+  u.theta.value = t * MAX_TILT; u.bend.value = s.bend; u.camDist.value = s.perspective; u.aspect.value = desktopAspect;
+  u.shade.value = s.shadow; u.blurMix.value = s.blur * Math.min(1, t * 1.8); u.vignette.value = s.vignette; u.sheen.value = s.sheen; u.panels.value = s.panels;
+  u.texSharp.value = desktopTex; u.texBlur.value = blurA.texture;
+  renderer.setRenderTarget(foldRT); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(foldScene, ortho); renderer.setRenderTarget(null);
+}
+
+// ------------------------------------------------------------------ 3D scene: desk + laptop
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xe9e4dc);
+scene.fog = new THREE.Fog(0xe9e4dc, 1.6, 3.2);
+const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 20);
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0xb9a98f, 0.75); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xfff2e6, 1.35); key.position.set(0.9, 1.6, 1.1); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.camera.near = 0.5; key.shadow.camera.far = 5; key.shadow.camera.left = key.shadow.camera.bottom = -0.6; key.shadow.camera.right = key.shadow.camera.top = 0.6; key.shadow.bias = -0.0005; key.shadow.radius = 4;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xdfe8ff, 0.45); fill.position.set(-1.2, 0.8, 0.6); scene.add(fill);
+const screenGlow = new THREE.PointLight(0xcfd6ff, 0, 0.9, 2); scene.add(screenGlow);
+
+// desk: wood texture painted on a canvas
+function paintWood() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 1024; const g = c.getContext('2d');
+  g.fillStyle = '#c9a77c'; g.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 260; i++) { g.strokeStyle = `rgba(${90 + Math.random() * 40},${60 + Math.random() * 30},${30 + Math.random() * 20},${0.05 + Math.random() * 0.12})`; g.lineWidth = 1 + Math.random() * 3; g.beginPath(); const y = Math.random() * 1024; g.moveTo(0, y); g.bezierCurveTo(300, y + (Math.random() - .5) * 30, 700, y + (Math.random() - .5) * 30, 1024, y + (Math.random() - .5) * 20); g.stroke(); }
+  for (let x = 0; x < 1024; x += 256) { g.fillStyle = 'rgba(60,40,20,.18)'; g.fillRect(x, 0, 2, 1024); }
+  return c;
+}
+const woodTex = new THREE.CanvasTexture(paintWood()); woodTex.wrapS = woodTex.wrapT = THREE.RepeatWrapping; woodTex.repeat.set(3, 3); woodTex.encoding = THREE.sRGBEncoding; woodTex.anisotropy = 8;
+const desk = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.55, metalness: 0.0 }));
+desk.rotation.x = -Math.PI / 2; desk.receiveShadow = true; scene.add(desk);
+
+// laptop dimensions (metres)
+const BW = 0.312, BD = 0.222, BH = 0.014;   // base
+const LW = 0.312, LH = 0.212, LT = 0.0055;  // lid
+const SW = 0.292, SH = SW * 9 / 16;          // screen
+const alu = new THREE.MeshStandardMaterial({ color: 0xcfd2d8, roughness: 0.35, metalness: 0.75 });
+const dark = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.6, metalness: 0.2 });
+
+// A rounded slab spanning exactly y = 0 .. h (bevels included), footprint w x d centred on the origin.
+function roundedBox(w, h, d, r, mat) {
+  const shape = new THREE.Shape();
+  const x = -w / 2, y = -d / 2;
+  shape.moveTo(x + r, y); shape.lineTo(x + w - r, y); shape.quadraticCurveTo(x + w, y, x + w, y + r); shape.lineTo(x + w, y + d - r); shape.quadraticCurveTo(x + w, y + d, x + w - r, y + d); shape.lineTo(x + r, y + d); shape.quadraticCurveTo(x, y + d, x, y + d - r); shape.lineTo(x, y + r); shape.quadraticCurveTo(x, y, x + r, y);
+  const bt = Math.min(0.0012, h * 0.3);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: h - 2 * bt, bevelEnabled: true, bevelThickness: bt, bevelSize: bt, bevelSegments: 3, curveSegments: 12 });
+  geo.rotateX(-Math.PI / 2); geo.translate(0, bt, 0);
+  const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m;
+}
+
+const laptop = new THREE.Group(); scene.add(laptop);
+const base = roundedBox(BW, BH, BD, 0.012, alu); laptop.add(base);
+// keyboard + trackpad
+function paintKeyboard() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 512; const g = c.getContext('2d');
+  g.fillStyle = '#b9bcc4'; g.fillRect(0, 0, 1024, 512);
+  const rows = [14, 14, 13, 12, 11, 8];
+  const key = (x, y, w, h) => { const r = 6; g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fill(); };
+  g.fillStyle = '#1c1f27';
+  rows.forEach((n, r) => { const kw = 1024 / 15, kh = 512 / 6.6; for (let i = 0; i < n; i++) { const w = r === 5 && i === 3 ? kw * 5 : kw; key((i + (r === 5 && i > 3 ? 4 : 0)) * kw + 6 + (r * 7), r * kh + 8, w - 10, kh - 12); } });
+  return c;
+}
+const kbTex = new THREE.CanvasTexture(paintKeyboard()); kbTex.encoding = THREE.sRGBEncoding; kbTex.anisotropy = 8;
+const keyboard = new THREE.Mesh(new THREE.PlaneGeometry(BW * 0.86, BD * 0.48), new THREE.MeshStandardMaterial({ map: kbTex, roughness: 0.7, metalness: 0.1 }));
+keyboard.rotation.x = -Math.PI / 2; keyboard.position.set(0, BH + 0.0006, -BD * 0.14); keyboard.receiveShadow = true; laptop.add(keyboard);
+const pad = new THREE.Mesh(new THREE.PlaneGeometry(BW * 0.36, BD * 0.26), new THREE.MeshStandardMaterial({ color: 0xc4c7ce, roughness: 0.3, metalness: 0.5 }));
+pad.rotation.x = -Math.PI / 2; pad.position.set(0, BH + 0.0006, BD * 0.30); laptop.add(pad);
+
+// lid group hinged at the back edge of the base. In hinge space the lid stands up along +y and its
+// front face (bezel, screen, glass) is the plane z = 0 facing the camera; the slab is behind it.
+const hinge = new THREE.Group(); hinge.position.set(0, BH, -BD / 2 + 0.006); laptop.add(hinge);
+const lid = roundedBox(LW, LT, LH, 0.012, alu);
+lid.rotation.x = Math.PI / 2;          // slab thickness now runs along +z (0 .. LT)
+lid.position.set(0, LH / 2, -LT);      // so the slab spans z = -LT .. 0
+hinge.add(lid);
+const bezel = new THREE.Mesh(new THREE.PlaneGeometry(LW - 0.006, LH - 0.006), new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.25, metalness: 0.3 }));
+bezel.position.set(0, LH / 2, 0.0003); hinge.add(bezel);
+const screen = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: foldRT.texture, toneMapped: false }));
+screen.position.set(0, LH / 2 + 0.004, 0.0006); hinge.add(screen);
+const glass = new THREE.Mesh(new THREE.PlaneGeometry(LW - 0.006, LH - 0.006), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.04, metalness: 0.0, transparent: true, opacity: 0.09, clearcoat: 1, clearcoatRoughness: 0.05, depthWrite: false }));
+glass.position.set(0, LH / 2, 0.001); hinge.add(glass);
+const hingeBar = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, LW * 0.9, 24), dark); hingeBar.rotation.z = Math.PI / 2; hingeBar.position.set(0, BH - 0.001, -BD / 2 + 0.006); laptop.add(hingeBar);
+// small logo glyph on the lid back (so the closed lid is not a blank slab)
+const logo = new THREE.Mesh(new THREE.RingGeometry(0.012, 0.016, 48), new THREE.MeshStandardMaterial({ color: 0x8a8f9a, roughness: 0.3, metalness: 0.9 }));
+logo.position.set(0, LH / 2, -LT - 0.0003); logo.rotation.y = Math.PI; hinge.add(logo);
+
+// ------------------------------------------------------------------ camera presets
+// `rise` is how far the camera climbs (and eases forward) as the lid closes: a viewer leans over
+// the laptop to keep watching the screen, which is also what keeps the fold visible on camera.
+const CAMS = {
+  front: { pos: [0.20, 0.30, 0.74], look: [0, 0.10, -0.03], fov: 32, rise: 0.34, lean: 0.20 },
+  side:  { pos: [0.72, 0.24, 0.30], look: [0, 0.10, -0.06], fov: 30, rise: 0.18, lean: 0.05 },
+  pov:   { pos: [0.02, 0.46, 0.50], look: [0, 0.11, -0.10], fov: 40, rise: 0.22, lean: 0.10 },
+  // A closing lid turns its screen toward the keyboard, so the screen can only be watched from low
+  // in front, and only until the lid reaches ~45°. This camera stays low and dips a little as the
+  // lid comes down, the way you follow a screen with your eyes when you close a laptop.
+  low:   { pos: [0.30, 0.16, 0.62], look: [0, 0.11, -0.02], fov: 30, rise: -0.05, lean: 0.12 },
+  // High in front, looking down at ~55°: the screen stays visible from fully open to nearly shut,
+  // so the whole closing motion and the fold on the screen can be watched together.
+  top:   { pos: [0.10, 0.80, 0.56], look: [0, 0.05, -0.05], fov: 30, rise: 0.06, lean: 0.10 },
+  // Slightly off to one side and high: shows the lid thickness and hinge while keeping the screen.
+  high:  { pos: [0.34, 0.72, 0.58], look: [0, 0.05, -0.05], fov: 30, rise: 0.08, lean: 0.10 },
+};
+let lidClosure = 0; // 0 open .. 1 shut, updated by setTime before the camera is placed
+function placeCamera(cycle) {
+  const c = CAMS[state.cam] || CAMS.front;
+  const portrait = state.h > state.w;
+  const k = portrait ? 1.22 : 1.0;
+  const drift = state.drift ? Math.sin(cycle * Math.PI * 2) : 0;
+  const r = lidClosure * lidClosure * (3 - 2 * lidClosure);
+  const pos = new THREE.Vector3(c.pos[0] * k + drift * 0.02, c.pos[1] * k + drift * 0.006 + c.rise * r, c.pos[2] * k - c.lean * r);
+  const look = new THREE.Vector3(c.look[0], c.look[1] + (portrait ? 0.02 : 0) - 0.06 * r, c.look[2] - 0.04 * r);
+  camera.fov = c.fov; camera.position.copy(pos); camera.lookAt(look);
+  camera.updateProjectionMatrix();
+}
+
+// ------------------------------------------------------------------ timeline
+const ease = x => { x = Math.min(1, Math.max(0, x)); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+// cycle in [0,1): hold open, close, hold closed, open, hold open
+// closure fraction (0 open .. 1 shut) for a normalized closing progress x in [0,1]
+function closureAt(x) {
+  if (state.pace !== 'fold') return ease(x);
+  // Three phases: quick approach to the fold window, a long dwell through it, a short finish.
+  const a = 1 - Math.min(state.zone, state.open) / state.open;   // closure where the fold starts
+  const b = 1 - Math.max(state.shut, 0) / state.open;             // closure where it completes
+  if (x < 0.18) return a * ease(x / 0.18);
+  if (x < 0.82) return a + (b - a) * ease((x - 0.18) / 0.64);
+  return b + (1 - b) * ease((x - 0.82) / 0.18);
+}
+function lidAngleAt(cycle) {
+  const open = state.open;
+  if (cycle < 0.08) return open;
+  if (cycle < 0.46) return open * (1 - closureAt((cycle - 0.08) / 0.38));
+  if (cycle < 0.58) return 0;
+  if (cycle < 0.94) return open * closureAt(1 - (cycle - 0.58) / 0.36);
+  return open;
+}
+function foldAmount(angle) {
+  // WinBend: the desktop stays flat until the lid is within `zone` degrees of shut, then the
+  // whole fold happens between `zone` and `shut` (smoothstep at both ends).
+  const span = Math.max(1, state.zone - state.shut);
+  const x = Math.min(1, Math.max(0, (state.zone - angle) / span));
+  return x * x * (3 - 2 * x);
+}
+function setTime(cycle) {
+  state.t = cycle - Math.floor(cycle);
+  const angle = lidAngleAt(state.t);
+  hinge.rotation.x = (90 - angle) * Math.PI / 180;
+  lidClosure = 1 - angle / state.open;
+  const t = foldAmount(angle);
+  renderFold(t);
+  // the screen lights the keyboard while it is open and unfolded
+  const vis = Math.max(0, Math.sin(angle * Math.PI / 180));
+  screenGlow.intensity = 0.35 * vis * (1 - t);
+  const sp = new THREE.Vector3(0, LH / 2, 0.01); hinge.localToWorld(sp); screenGlow.position.copy(sp);
+  placeCamera(state.t);
+  renderer.render(scene, camera);
+  $('t').value = state.t; $('tOut').textContent = state.t.toFixed(2);
+  return { cycle: state.t, angle, fold: t };
+}
+
+// ------------------------------------------------------------------ UI wiring
+$('style').onchange = e => { state.style = e.target.value; };
+$('zone').oninput = e => { state.zone = +e.target.value; $('zoneOut').textContent = state.zone + '°'; };
+$('shut').oninput = e => { state.shut = +e.target.value; $('shutOut').textContent = state.shut + '°'; };
+$('pace').onchange = e => { state.pace = e.target.value; };
+$('shut').value = state.shut; $('shutOut').textContent = state.shut + '°'; $('pace').value = state.pace; $('zoneOut').textContent = state.zone + '°'; $('openOut').textContent = state.open + '°';
+$('open').oninput = e => { state.open = +e.target.value; $('openOut').textContent = state.open + '°'; };
+$('dur').oninput = e => { state.dur = +e.target.value; $('durOut').textContent = state.dur.toFixed(1) + ' s'; };
+$('cam').onchange = e => { state.cam = e.target.value; };
+$('aspect').onchange = e => { const [w, h] = e.target.value.split('x').map(Number); state.w = w; state.h = h; fitCanvas(); };
+$('drift').oninput = e => { state.drift = +e.target.value; $('driftOut').textContent = state.drift ? 'on' : 'off'; };
+$('t').oninput = e => { state.playing = false; $('play').textContent = 'Play'; setTime(+e.target.value); };
+$('play').onclick = () => { state.playing = !state.playing; $('play').textContent = state.playing ? 'Pause' : 'Play'; };
+$('clean').onclick = () => document.body.classList.toggle('clean');
+addEventListener('keydown', e => { if (e.code === 'KeyH') document.body.classList.toggle('clean'); if (e.code === 'Space') { e.preventDefault(); $('play').click(); } });
+$('img').onchange = e => { const f = e.target.files[0]; if (!f) return; const url = URL.createObjectURL(f); loadDesktop(url); };
+function loadDesktop(url) {
+  return new Promise(res => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.onload = () => { desktopTex.dispose(); desktopTex = new THREE.Texture(img); desktopTex.encoding = THREE.sRGBEncoding; desktopTex.minFilter = THREE.LinearMipmapLinearFilter; desktopTex.anisotropy = 8; desktopTex.needsUpdate = true; desktopAspect = img.width / img.height; rebuildBlur(); res(true); };
+    img.onerror = () => res(false);
+    img.src = url;
+  });
+}
+
+// record one cycle to WebM (real browser only; the in-app preview blocks downloads)
+$('record').onclick = async () => {
+  const fps = 30, frames = Math.round(state.dur * fps);
+  const stream = canvas.captureStream(0); const track = stream.getVideoTracks()[0];
+  const rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm', videoBitsPerSecond: 16e6 });
+  const chunks = []; rec.ondataavailable = e => chunks.push(e.data);
+  rec.onstop = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); a.download = `winbend-lid-${state.style}-${state.w}x${state.h}.webm`; a.click(); };
+  state.playing = false; document.body.classList.add('clean'); rec.start();
+  for (let i = 0; i < frames; i++) { setTime(i / frames); if (track.requestFrame) track.requestFrame(); await new Promise(r => setTimeout(r, 1000 / fps)); }
+  rec.stop(); document.body.classList.remove('clean'); state.playing = true;
+};
+
+// ------------------------------------------------------------------ main loop + headless API
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (state.playing) setTime(state.t + dt / state.dur);
+  requestAnimationFrame(frame);
+}
+window.WB = {
+  isReady: false,
+  setTime: cycle => { state.playing = false; return setTime(cycle); },
+  setStyle: s => { state.style = s; },
+  configure: o => Object.assign(state, o),
+};
+(async () => {
+  fitCanvas(); addEventListener('resize', fitCanvas);
+  rebuildBlur();
+  if (q.get('img')) await loadDesktop(q.get('img'));
+  setTime(state.t);
+  window.WB.isReady = true;
+  if (state.playing) requestAnimationFrame(frame);
+})();
+})();
+</script>
+</body>
+</html>

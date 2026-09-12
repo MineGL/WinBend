@@ -24,21 +24,15 @@ nav a{color:var(--muted);text-decoration:none;margin-left:22px;font-size:15px}na
 .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 20px;border-radius:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);color:var(--ink);background:var(--card)}
 .btn.primary{background:var(--ink);color:#0d0f16;border-color:var(--ink)}.btn:hover{border-color:var(--accent)}
 .fine{font-size:13px;color:var(--muted)}
-/* CSS demo of the fold */
-.demo{perspective:900px;perspective-origin:50% 60%;aspect-ratio:16/10;position:relative}
-.screen{position:absolute;inset:0;border-radius:14px;overflow:hidden;transform-origin:50% 100%;background:
- radial-gradient(120% 90% at 20% 10%,#6d7cff 0%,#3b3f8f 35%,#1c2140 70%,#0e1120 100%);
- box-shadow:0 30px 80px #0009,inset 0 0 0 1px #ffffff18;animation:fold 6.5s cubic-bezier(.65,0,.35,1) infinite}
-.screen:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 55%,#0000004d 100%);animation:shade 6.5s cubic-bezier(.65,0,.35,1) infinite}
-.win{position:absolute;background:#f6f7fbe6;border-radius:8px;box-shadow:0 10px 30px #0006}
-.win.a{left:8%;top:14%;width:52%;height:56%}.win.b{left:46%;top:30%;width:44%;height:50%;background:#1d2130e6}
-.win i{display:block;height:8px;margin:12px 12px 0;border-radius:4px;background:#c7cbe0}.win.b i{background:#3a4060}.win i:nth-child(2){width:60%}.win i:nth-child(3){width:35%}
-.bar{position:absolute;left:0;right:0;bottom:0;height:8%;background:#0f1220cc;display:flex;justify-content:center;gap:6%;align-items:center}.bar b{width:4%;aspect-ratio:1;border-radius:30%;background:#ffffff66}
-.deck{position:absolute;left:-3%;right:-3%;bottom:-6%;height:6%;border-radius:0 0 14px 14px;background:linear-gradient(180deg,#1c2033,#0b0d16)}
-@keyframes fold{0%,12%{transform:rotateX(0)}45%,58%{transform:rotateX(84deg)}90%,100%{transform:rotateX(0)}}
-@keyframes shade{0%,12%{opacity:0}45%,58%{opacity:1}90%,100%{opacity:0}}
-@media (prefers-reduced-motion:reduce){.screen,.screen:before{animation:none;transform:rotateX(38deg)}}
-section{padding:56px 0;border-top:1px solid var(--line)}
+/* A physical lid and its desktop share one synchronized eight-second timeline. */
+.teaser{grid-column:1/-1;margin:6px 0 12px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#0d0f16;box-shadow:0 24px 80px #0005}
+.teaser iframe{border:0;display:block;width:100%;aspect-ratio:16/10;object-fit:contain}
+.teaser figcaption{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 22px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+.teaser button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+.teaser button:hover,.teaser button:focus-visible{border-color:var(--accent2)}
+.hero{grid-template-columns:1fr;gap:20px}.hero>div:first-child{max-width:800px}.hero p.lead{max-width:40em}
+.bar{position:absolute;left:0;right:0;bottom:0;height:8%;background:#0f1220cc}
+@media(max-width:480px){.teaser figcaption{padding:12px;font-size:12px}.teaser{border-radius:12px}}section{padding:56px 0;border-top:1px solid var(--line)}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
 .card p{color:var(--muted);margin:0;font-size:15px}
@@ -111,15 +105,9 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
     </div>
     <p class="fine">Free and open source (MIT). Installer or a single portable file, no account, no network. Windows 10 2004+ / Windows 11.</p>
   </div>
-  <div class="demo" aria-hidden="true">
-    <div class="screen">
-      <div class="win a"><i></i><i></i><i></i></div>
-      <div class="win b"><i></i><i></i><i></i></div>
-      <div class="bar"><b></b><b></b><b></b><b></b><b></b></div>
-    </div>
-    <div class="deck"></div>
-  </div>
-</section>
+  <figure class="teaser">
+    <iframe id="teaser-laptop" src="laptop-teaser.html?clean=1&amp;still=1&amp;w=1280&amp;h=800&amp;cam=low&amp;zone=75&amp;dur=8&amp;drift=0&amp;t=0.12" title="A laptop lid closes while WinBend folds the desktop in sync, then both reopen." loading="lazy"></iframe>    <figcaption><span>Close the lid. Watch Windows follow. <span class="fine">Silk effect · 3D illustration</span></span><button id="teaser-toggle" type="button" hidden>Play animation</button></figcaption>
+  </figure></section>
 
 <section id="features">
   <h2>How it works</h2>
@@ -172,6 +160,18 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
 </footer>
 </div>
 <script>
+(()=>{
+  const frame=document.getElementById('teaser-laptop'),button=document.getElementById('teaser-toggle');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  let wanted=!reduced.matches,visible=false;
+  button.hidden=false;
+  const update=()=>{const play=wanted&&visible&&!document.hidden;frame.contentWindow?.postMessage({type:'winbend-play',play},location.origin);button.textContent=play?'Pause animation':'Play animation';};
+  button.addEventListener('click',()=>{wanted=button.textContent==='Play animation';update();});
+  reduced.addEventListener('change',()=>{wanted=!reduced.matches;update();});
+  document.addEventListener('visibilitychange',update);
+  window.addEventListener('message',event=>{if(event.origin===location.origin&&event.source===frame.contentWindow&&event.data?.type==='winbend-ready')update();});
+  new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;update();},{threshold:.01}).observe(frame.parentElement);
+})();
 document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);const t=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=t,1500);}catch{const r=document.createRange();r.selectNodeContents(b.parentElement.querySelector('code'));const s=getSelection();s.removeAllRanges();s.addRange(r);}}));
 </script>
 </body>

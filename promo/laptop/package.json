@@ -1,0 +1,12 @@
+{
+  "name": "winbend-lid-render",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Headless renderer for the WinBend lid animation (index.html).",
+  "scripts": {
+    "render": "node render.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

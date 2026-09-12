@@ -7,3 +7,5 @@
 /promo/out
 /promo/clips/*.mp4
 /promo/composite/target
+/promo/laptop/node_modules
+/promo/laptop/package-lock.json
