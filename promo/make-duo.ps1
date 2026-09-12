@@ -32,7 +32,7 @@ $bg = "0x0d0f16"; $white = "0xffffff"; $accent = "0x8f8bff"; $muted = "0x9ea6bd"
 $light = "C\:/Windows/Fonts/segoeuil.ttf"; $reg = "C\:/Windows/Fonts/segoeui.ttf"; $bold = "C\:/Windows/Fonts/segoeuib.ttf"
 $S = [Math]::Min($W, $H) / 1080.0   # type scale; y positions are fractions of H
 
-function Esc($text) { $text -replace "\\", "\\\\" -replace "'", "\\'" -replace ":", "\\:" -replace ",", "\\," -replace "%", "\\%" }
+function Esc($text) { (((($text -replace '\\', '\\') -replace "'", "\'") -replace ':', '\:') -replace ',', '\,') -replace '%', '\%' }
 function Draw($text, $font, $size, $color, $yFrac, $extra = "") {
     $px = [int]($size * $S); $y = [int]($yFrac * $H)
     "drawtext=fontfile='${font}':text='$(Esc $text)':fontsize=${px}:fontcolor=${color}:x=(w-text_w)/2:y=${y}${extra}"

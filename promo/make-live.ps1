@@ -28,7 +28,7 @@ if (-not (Test-Path "$work\silk\0095.png")) { throw "fold frames missing: run pr
 $fps = 30
 $black = "0x000000"; $white = "0xffffff"
 $light = "C\:/Windows/Fonts/segoeuil.ttf"; $bold = "C\:/Windows/Fonts/segoeuib.ttf"
-function Esc($text) { $text -replace "\\", "\\\\" -replace "'", "\\'" -replace ":", "\\:" -replace ",", "\\," -replace "%", "\\%" }
+function Esc($text) { (((($text -replace '\\', '\\') -replace "'", "\'") -replace ':', '\:') -replace ',', '\,') -replace '%', '\%' }
 function Draw($text, $font, $size, $color, $y, $extra = "") { "drawtext=fontfile='${font}':text='$(Esc $text)':fontsize=${size}:fontcolor=${color}:x=(w-text_w)/2:y=${y}${extra}" }
 function Run($outFile, $ffArgs) {
     & $ffmpeg -y -loglevel error @ffArgs $outFile

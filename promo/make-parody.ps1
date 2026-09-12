@@ -22,7 +22,7 @@ $light = "C\:/Windows/Fonts/segoeuil.ttf"     # thin display face, keynote feel
 $semi  = "C\:/Windows/Fonts/seguisb.ttf"
 $bold  = "C\:/Windows/Fonts/segoeuib.ttf"
 
-function Esc($text) { $text -replace "\\", "\\\\" -replace "'", "\\'" -replace ":", "\\:" -replace ",", "\\," -replace "%", "\\%" }
+function Esc($text) { (((($text -replace '\\', '\\') -replace "'", "\'") -replace ':', '\:') -replace ',', '\,') -replace '%', '\%' }
 function Draw($text, $font, $size, $color, $y, $extra = "") {
     "drawtext=fontfile='${font}':text='$(Esc $text)':fontsize=${size}:fontcolor=${color}:x=(w-text_w)/2:y=${y}${extra}"
 }
