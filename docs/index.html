@@ -260,5 +260,8 @@ footer{padding:36px 0 50px;color:var(--muted);font-size:14px;border-top:1px soli
 })();
 document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);const t=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=t,1500);}catch{const r=document.createRange();r.selectNodeContents(b.parentElement.querySelector('code'));const s=getSelection();s.removeAllRanges();s.addRange(r);}}));
 </script>
+<!-- Cloudflare Web Analytics: cookie-free page view counts for the winbend.me dashboard -->
+<script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "43180714f5ed4110a591d43017eff3ca"}'></script>
+<!-- End Cloudflare Web Analytics -->
 </body>
 </html>
